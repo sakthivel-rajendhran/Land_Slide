@@ -268,8 +268,7 @@ body.dashboard-root,
 /* --- Top Navigation Bar --- */
 .dashboard-topbar {
   height: var(--topbar-height);
-  background: rgba(248, 246, 238, 0.95);
-  backdrop-filter: blur(16px);
+  background: #F8F6EE;
   border-bottom: 1px solid var(--lw-border, #D9C9B2);
   display: flex;
   align-items: center;
@@ -974,14 +973,12 @@ body.dashboard-root,
   bottom: 24px;
   left: 20px;
   max-width: 340px;
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: #FFFFFF;
   border: 1px solid var(--lw-border, #D9C9B2);
   border-radius: 6px;
   padding: 14px 16px;
   z-index: 500;
-  box-shadow: 0 4px 20px rgba(46, 58, 47, 0.1);
+  box-shadow: 0 4px 14px rgba(46, 58, 47, 0.08);
   font-size: 0.75rem;
 }
 
@@ -1379,4 +1376,356 @@ body.dashboard-root,
     height: 320px;
   }
 }
+
+/* =========================================================================
+   Citizen Dashboard Redesign Component Styles
+   Palette: Deep Forest Green (#2E3A2F), Sage Green (#6B7F5B), Sand Beige (#D9C9B2),
+            Terracotta (#C96F4F), Warm Ivory (#F8F6EE)
+   Solid Surfaces, Clear Borders, Subtle Shadows — No Backdrop Blur / Glassmorphism
+   ========================================================================= */
+
+/* Quick Actions 4-Column Grid */
+.citizen-quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+@media (max-width: 1024px) {
+  .citizen-quick-actions-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 580px) {
+  .citizen-quick-actions-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.citizen-quick-action-card {
+  background: #FFFFFF;
+  border: 1px solid #D9C9B2;
+  border-radius: 6px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 1px 3px rgba(46, 58, 47, 0.06);
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  position: relative;
+  overflow: hidden;
+}
+.citizen-quick-action-card:hover {
+  transform: translateY(-2px);
+  border-color: #6B7F5B;
+  box-shadow: 0 4px 12px rgba(46, 58, 47, 0.08);
+}
+.citizen-quick-action-card.highlight {
+  border-left: 4px solid #C96F4F;
+  background: #FFFFFF;
+}
+.quick-action-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.quick-action-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  background: #F8F6EE;
+  border: 1px solid #D9C9B2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2E3A2F;
+}
+.citizen-quick-action-card.highlight .quick-action-icon-wrap {
+  background: rgba(201, 111, 79, 0.12);
+  border-color: rgba(201, 111, 79, 0.3);
+  color: #C96F4F;
+}
+.quick-action-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #2E3A2F;
+  margin: 0 0 4px 0;
+}
+.quick-action-desc {
+  font-size: 0.775rem;
+  color: #4A5D48;
+  line-height: 1.45;
+  margin: 0 0 12px 0;
+}
+.quick-action-link-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #6B7F5B;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.citizen-quick-action-card.highlight .quick-action-link-label {
+  color: #C96F4F;
+}
+
+/* Official Alerts Feed Card */
+.citizen-alerts-box {
+  background: #FFFFFF;
+  border: 1px solid #D9C9B2;
+  border-radius: 6px;
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(46, 58, 47, 0.06);
+}
+.citizen-alerts-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #D9C9B2;
+  padding-bottom: 10px;
+}
+.citizen-alerts-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #2E3A2F;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.citizen-alert-item {
+  background: #F8F6EE;
+  border: 1px solid #D9C9B2;
+  border-left: 4px solid #C96F4F;
+  border-radius: 4px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.citizen-alert-item.critical {
+  border-left-color: #B84B29;
+  background: #FFF8F6;
+}
+.citizen-alert-item.high {
+  border-left-color: #C96F4F;
+}
+.citizen-alert-item.info {
+  border-left-color: #6B7F5B;
+  background: #F8F6EE;
+}
+.citizen-alert-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+.citizen-alert-badge {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 3px;
+}
+.citizen-alert-badge.critical {
+  background: #B84B29;
+  color: #FFFFFF;
+}
+.citizen-alert-badge.high {
+  background: #C96F4F;
+  color: #FFFFFF;
+}
+.citizen-alert-badge.moderate {
+  background: #C58A2B;
+  color: #FFFFFF;
+}
+.citizen-alert-badge.info {
+  background: #6B7F5B;
+  color: #FFFFFF;
+}
+.citizen-alert-timestamp {
+  font-size: 0.75rem;
+  color: #5E6F5C;
+}
+.citizen-alert-msg {
+  font-size: 0.8125rem;
+  color: #2E3A2F;
+  line-height: 1.45;
+  margin: 4px 0 0 0;
+}
+.citizen-alert-location {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #4A5D48;
+  margin-top: 4px;
+}
+
+/* Category Selection Cards (Step 1 of Incident Reporting) */
+.category-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+.category-option-card {
+  background: #FFFFFF;
+  border: 1px solid #D9C9B2;
+  border-radius: 6px;
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.category-option-card:hover {
+  border-color: #6B7F5B;
+  background: #F8F6EE;
+}
+.category-option-card.selected {
+  border-color: #C96F4F;
+  background: rgba(201, 111, 79, 0.08);
+  box-shadow: 0 0 0 2px rgba(201, 111, 79, 0.25);
+}
+.category-icon-box {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: #F8F6EE;
+  border: 1px solid #D9C9B2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  color: #2E3A2F;
+}
+.category-option-card.selected .category-icon-box {
+  background: #C96F4F;
+  border-color: #C96F4F;
+  color: #FFFFFF;
+}
+.category-label {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #2E3A2F;
+}
+.category-subtext {
+  font-size: 0.6875rem;
+  color: #5E6F5C;
+  margin-top: 2px;
+}
+
+/* 6-Stage Citizen Report Status Lifecycle Timeline */
+.lifecycle-timeline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  position: relative;
+  margin: 20px 0;
+  padding: 0 10px;
+}
+.lifecycle-timeline::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  left: 24px;
+  right: 24px;
+  height: 2px;
+  background: #D9C9B2;
+  z-index: 1;
+}
+.lifecycle-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+  flex: 1;
+}
+.lifecycle-circle {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 2px solid #D9C9B2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #5E6F5C;
+  margin-bottom: 8px;
+  transition: all 0.2s ease;
+}
+.lifecycle-step.completed .lifecycle-circle {
+  background: #6B7F5B;
+  border-color: #6B7F5B;
+  color: #FFFFFF;
+}
+.lifecycle-step.active .lifecycle-circle {
+  background: #C96F4F;
+  border-color: #C96F4F;
+  color: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(201, 111, 79, 0.25);
+}
+.lifecycle-step.needs-info .lifecycle-circle {
+  background: #C58A2B;
+  border-color: #C58A2B;
+  color: #FFFFFF;
+}
+.lifecycle-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #5E6F5C;
+  line-height: 1.25;
+}
+.lifecycle-step.completed .lifecycle-label {
+  color: #2E3A2F;
+}
+.lifecycle-step.active .lifecycle-label {
+  color: #C96F4F;
+}
+.lifecycle-step.needs-info .lifecycle-label {
+  color: #C58A2B;
+}
+
+@media (max-width: 680px) {
+  .lifecycle-timeline {
+    flex-direction: column;
+    align-items: stretch;
+    padding-left: 20px;
+  }
+  .lifecycle-timeline::before {
+    top: 14px;
+    bottom: 14px;
+    left: 29px;
+    width: 2px;
+    height: auto;
+    right: auto;
+  }
+  .lifecycle-step {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    text-align: left;
+  }
+  .lifecycle-circle {
+    margin-bottom: 0;
+    flex-shrink: 0;
+  }
+  .lifecycle-label {
+    font-size: 0.75rem;
+  }
+}
+
 

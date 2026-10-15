@@ -597,15 +597,27 @@
             <span class="sidebar-brand-badge" id="incidentTableBadge">0 RECORDS</span>
           </div>
 
-          <!-- Status Filter Pills -->
-          <div class="filter-pills-bar" id="incidentFilterBar">
-            <button type="button" class="filter-pill active" data-status="all">All Incidents</button>
-            <button type="button" class="filter-pill" data-status="pending verification">Pending Verification</button>
-            <button type="button" class="filter-pill" data-status="under review">Under Review</button>
-            <button type="button" class="filter-pill" data-status="verified">Verified</button>
-            <button type="button" class="filter-pill" data-status="additional info requested">Info Requested</button>
-            <button type="button" class="filter-pill" data-status="resolved">Resolved</button>
-            <button type="button" class="filter-pill" data-status="rejected">Rejected</button>
+          <!-- Incident Search & Filter Bar -->
+          <div style="padding: 12px 18px; border-bottom: 1px solid var(--lw-border, #D9C9B2); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+            <div style="position: relative; width: 100%; max-width: 360px;">
+              <svg style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--color-text-muted); pointer-events: none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="assessmentsIncidentSearchInput" placeholder="Search by ID, category, road, citizen, officer..." style="width: 100%; padding: 6px 30px 6px 32px; border-radius: 4px; border: 1px solid var(--lw-border, #D9C9B2); background: #FFFFFF; font-family: inherit; font-size: 0.8125rem; color: var(--color-text-primary);" />
+              <button type="button" id="assessmentsIncidentSearchClear" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 1.1rem; color: var(--color-text-muted); cursor: pointer; padding: 2px 6px; line-height: 1;" title="Clear search">&times;</button>
+            </div>
+
+            <!-- Status Filter Pills -->
+            <div class="filter-pills-bar" id="incidentFilterBar" style="margin-bottom: 0;">
+              <button type="button" class="filter-pill active" data-status="all">All Incidents</button>
+              <button type="button" class="filter-pill" data-status="pending verification">Pending Verification</button>
+              <button type="button" class="filter-pill" data-status="under review">Under Review</button>
+              <button type="button" class="filter-pill" data-status="verified">Verified</button>
+              <button type="button" class="filter-pill" data-status="additional info requested">Info Requested</button>
+              <button type="button" class="filter-pill" data-status="resolved">Resolved</button>
+              <button type="button" class="filter-pill" data-status="rejected">Rejected</button>
+            </div>
           </div>
 
           <div class="reports-table-wrap">
@@ -905,6 +917,7 @@
   <script src="../js/core/auth.js"></script>
   <script src="../js/core/ui.js"></script>
   <script src="../js/core/guard.js"></script>
+  <script src="../js/services/reports-storage.js"></script>
   <script src="../js/services/regions-service.js"></script>
   <script src="../js/services/incidents-service.js"></script>
 
@@ -1412,8 +1425,37 @@
       // --- INCIDENTS PIPELINE CONTROLLER ---
       // ==========================================
       let currentIncidentFilter = "all";
+      let currentIncidentSearch = "";
       let allIncidents = [];
       let selectedIncident = null;
+
+      // Search input & clear button (Task 2)
+      const incSearchInput = document.getElementById("assessmentsIncidentSearchInput");
+      const incSearchClear = document.getElementById("assessmentsIncidentSearchClear");
+      let incSearchTimer = null;
+
+      if (incSearchInput) {
+        incSearchInput.addEventListener("input", (e) => {
+          clearTimeout(incSearchTimer);
+          incSearchTimer = setTimeout(() => {
+            currentIncidentSearch = e.target.value.trim();
+            if (incSearchClear) {
+              incSearchClear.style.display = currentIncidentSearch ? "block" : "none";
+            }
+            renderIncidentReports();
+          }, 150);
+        });
+      }
+
+      if (incSearchClear) {
+        incSearchClear.addEventListener("click", () => {
+          incSearchInput.value = "";
+          currentIncidentSearch = "";
+          incSearchClear.style.display = "none";
+          renderIncidentReports();
+          incSearchInput.focus();
+        });
+      }
 
       // Filter pills setup
       document.querySelectorAll("#incidentFilterBar .filter-pill").forEach(pill => {
@@ -1537,21 +1579,48 @@
         if (!tbody) return;
 
         let filtered = allIncidents;
+        if (currentIncidentSearch) {
+          if (window.LW.reportsStorage?.searchReports) {
+            filtered = window.LW.reportsStorage.searchReports(allIncidents, currentIncidentSearch, "admin");
+          } else {
+            const q = currentIncidentSearch.toLowerCase();
+            filtered = allIncidents.filter(i =>
+              (i.id || "").toLowerCase().includes(q) ||
+              (i.incidentType || i.incident_category || "").toLowerCase().includes(q) ||
+              (i.description || "").toLowerCase().includes(q) ||
+              (i.location?.roadName || i.location?.placeName || "").toLowerCase().includes(q)
+            );
+          }
+        }
+
         if (currentIncidentFilter !== "all") {
-          filtered = allIncidents.filter(item => (item.status || "").toLowerCase() === currentIncidentFilter);
+          filtered = filtered.filter(item => (item.status || "").toLowerCase() === currentIncidentFilter);
         }
 
         const tableBadge = document.getElementById("incidentTableBadge");
         if (tableBadge) tableBadge.textContent = `${filtered.length} RECORDS`;
 
         if (filtered.length === 0) {
+          const emptyMsg = currentIncidentSearch
+            ? `No incidents matching search '${currentIncidentSearch}'.`
+            : `No incidents found matching filter '${currentIncidentFilter}'.`;
           tbody.innerHTML = `
             <tr>
               <td colspan="7" style="text-align: center; padding: 36px; color: var(--color-text-muted);">
-                No incidents found matching filter '${currentIncidentFilter}'.
+                ${emptyMsg}
+                ${currentIncidentSearch ? `<br/><button type="button" id="btnClearIncSearchInline" class="lw-btn lw-btn--sm lw-btn--outline" style="margin-top: 10px;">Clear Search</button>` : ''}
               </td>
             </tr>
           `;
+          const btn = document.getElementById("btnClearIncSearchInline");
+          if (btn) {
+            btn.onclick = () => {
+              incSearchInput.value = "";
+              currentIncidentSearch = "";
+              incSearchClear.style.display = "none";
+              renderIncidentReports();
+            };
+          }
           return;
         }
 
@@ -1561,7 +1630,7 @@
           const photoThumbnails = (item.photos && item.photos.length > 0)
             ? (() => {
                 const pUrl = item.photos[0].url || '';
-                const resolved = (pUrl.startsWith('http') || pUrl.startsWith('/')) ? pUrl : `../${pUrl.replace(/^(\.\.\/)+/, '')}`;
+                const resolved = (pUrl.startsWith('http') || pUrl.startsWith('/') || pUrl.startsWith('blob:') || pUrl.startsWith('data:')) ? pUrl : `../${pUrl.replace(/^(\.\.\/)+/, '')}`;
                 return `<div style="display:flex;gap:4px;align-items:center;">
                   <img src="${resolved}" alt="Evidence" style="width:36px;height:36px;object-fit:cover;border-radius:3px;border:1px solid #30432D;" onerror="this.style.display='none'" />
                   <span style="font-size:0.75rem;color:var(--color-text-secondary);font-weight:600;">${item.photos.length} photo${item.photos.length>1?'s':''}</span>
@@ -1572,6 +1641,10 @@
           const citizenDisplay = item.citizenName || item.citizenEmail || item.citizenId || "Citizen";
           const obsTime = item.observedAt ? (format.relativeTime ? format.relativeTime(item.observedAt) : new Date(item.observedAt).toLocaleString()) : "--";
           const subTime = item.submittedAt ? (format.relativeTime ? format.relativeTime(item.submittedAt) : new Date(item.submittedAt).toLocaleString()) : "--";
+
+          const officer = item.assigned_officer || item.assignedOfficer;
+          const officerTag = officer ? `<div style="font-size: 0.6875rem; color: #2563EB; font-weight: 700; margin-top: 3px;">Officer: ${officer.name} (${officer.taskStatus || 'PENDING'})${officer.inspectionCompleted ? ' 📍' : ''}</div>` : '';
+          const escalationTag = item.escalation ? `<div style="font-size: 0.6875rem; color: #DC2626; font-weight: 700; margin-top: 2px;">🚨 Escalated: ${item.escalation.agency}</div>` : '';
 
           return `
             <tr>
@@ -1613,6 +1686,8 @@
               </td>
               <td>
                 <span class="status-badge ${statusClass}">${item.status || "Submitted"}</span>
+                ${officerTag}
+                ${escalationTag}
               </td>
               <td>
                 <button type="button" class="lw-btn lw-btn--sm lw-btn--primary" data-incident-action="review" data-id="${item.id}">
@@ -1669,7 +1744,7 @@
           } else {
             photosGrid.innerHTML = photos.map(p => {
               const pUrl = p.url || '';
-              const cleanedUrl = (pUrl.startsWith('http') || pUrl.startsWith('/')) ? pUrl : ("../" + pUrl.replace(/^(\.\.\/)+/, ''));
+              const cleanedUrl = (pUrl.startsWith('http') || pUrl.startsWith('/') || pUrl.startsWith('blob:') || pUrl.startsWith('data:')) ? pUrl : ("../" + pUrl.replace(/^(\.\.\/)+/, ''));
               return `
                 <a href="${cleanedUrl}" target="_blank" title="View Full Evidence Image" style="display: block; position: relative;">
                   <img src="${cleanedUrl}" alt="Photo Evidence" style="width: 100px; height: 80px; object-fit: cover; border-radius: 4px; border: 1px solid #30432D; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" />
@@ -1814,6 +1889,13 @@
       loadCitizenAssessments();
       renderSensorQueue();
       loadIncidentReports();
+
+      // Cross-tab live synchronization via BroadcastChannel
+      if (window.LW.reportsStorage?.onSync) {
+        window.LW.reportsStorage.onSync(() => {
+          loadIncidentReports();
+        });
+      }
     });
   </script>
 </body>

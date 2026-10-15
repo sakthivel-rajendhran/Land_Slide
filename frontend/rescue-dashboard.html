@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SlopeGuard — Rescue Force Dashboard</title>
+  <meta name="description" content="Dedicated mission response and tactical field tracking console for disaster response teams and geotechnical field units.">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><polygon points='12,32 23,6 34,32' fill='%23C96F4F'/><polygon points='4,32 16,14 24,32' fill='%232E3A2F'/></svg>">
+
+  <!-- Preconnect to Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/leaflet.css">
+  <link rel="stylesheet" href="css/pages/rescue-dashboard.css">
+
+  <!-- Immediate Authentication & Role Guard -->
+  <script>
+    (function() {
+      function checkAuth() {
+        try {
+          var raw = sessionStorage.getItem("sg_user") || localStorage.getItem("sg_user");
+          var user = raw ? JSON.parse(raw) : null;
+          if (!user) {
+            window.location.replace("login.html?next=rescue-dashboard.html");
+            return;
+          }
+          var role = (user.role || "").toUpperCase();
+          if (role !== "OFFICER" && role !== "RESCUE_FORCE" && role !== "ADMIN") {
+            window.location.replace("dashboard.html");
+          }
+        } catch (e) {
+          window.location.replace("login.html");
+        }
+      }
+      checkAuth();
+      window.addEventListener("pageshow", function(e) {
+        if (e.persisted) checkAuth();
+      });
+    })();
+  </script>
+</head>
+<body class="rescue-dashboard-body">
+
+  <!-- =========================================================================
+       Topbar: Command Header
+       ========================================================================= -->
+  <header class="rescue-topbar">
+    <div class="rescue-brand-group">
+      <a href="rescue-dashboard.html" class="rescue-brand-logo" aria-label="SlopeGuard Rescue Force Dashboard">
+        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="12,34 23,8 34,34" fill="#C96F4F"/>
+          <polygon points="4,34 16,16 24,34" fill="#6B7F5B"/>
+        </svg>
+        <span class="rescue-brand-title">
+          SlopeGuard
+          <span class="rescue-role-tag">Rescue Force</span>
+        </span>
+      </a>
+      <div class="rescue-status-pill">
+        <span class="pulse-dot"></span>
+        <span>GPS TRACKING READY &bull; RESCUE FORCE COMMAND</span>
+      </div>
+    </div>
+
+    <div class="rescue-topbar-actions">
+      <!-- Duty Toggle Switch -->
+      <button type="button" class="rescue-btn-secondary" id="btnDutyToggle" data-duty="on" title="Toggle On/Off Duty Status">
+        <span>On Duty</span>
+      </button>
+
+      <!-- Emergency Quick-Call -->
+      <button type="button" class="rescue-btn-sos" id="btnEmergencyHelp" title="Emergency Operations Room Contacts">
+        <span>Emergency Helplines</span>
+      </button>
+
+      <!-- Rescue Force Profile & Logout -->
+      <div class="rescue-officer-profile">
+        <div class="rescue-officer-avatar" id="officerAvatar">R</div>
+        <div style="display: flex; flex-direction: column; line-height: 1.2;">
+          <strong id="officerName" style="color: #FFFFFF;">Rescue Force Unit</strong>
+          <span style="font-size: 0.6875rem; color: #D9C9B2;">Rescue Force Personnel</span>
+        </div>
+      </div>
+
+      <button type="button" class="rescue-btn-secondary" id="btnSignOut" title="Sign out of rescue terminal">
+        Sign Out
+      </button>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       Main Content Container
+       ========================================================================= -->
+  <main class="rescue-container">
+
+    <!-- =========================================================================
+         Active Mission Hero Banner (Pinned when an operation is active)
+         ========================================================================= -->
+    <section class="active-mission-banner" id="activeMissionBanner" style="display: none;">
+      <div class="active-mission-header">
+        <div class="active-mission-title-group">
+          <h2 class="active-mission-title" id="bannerMissionTitle">Incident Mission #--</h2>
+          <span class="mission-stage-badge" id="bannerStageBadge">ASSIGNED</span>
+        </div>
+        <div class="active-mission-telemetry">
+          <span class="telemetry-pill" id="bannerGpsPill">
+            <span class="pulse-dot"></span> GPS Standby
+          </span>
+        </div>
+      </div>
+
+      <!-- GPS Permission & Live Tracking Notice / Error Retry Box -->
+      <div class="gps-permission-box" id="bannerGpsAlertBox" style="display: none; padding: 12px 16px; margin: 12px 0; border-radius: 6px; font-size: 0.8125rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+          <div style="display: flex; align-items: flex-start; gap: 8px;">
+            <span id="bannerGpsAlertIcon" style="font-size: 1.1rem;">📍</span>
+            <div>
+              <strong id="bannerGpsAlertTitle">Location Tracking Status</strong>
+              <div id="bannerGpsAlertMsg" style="margin-top: 2px;">SlopeGuard requires live device GPS permission to transmit tactical coordinates to the SDMA Operations Center during active transit.</div>
+            </div>
+          </div>
+          <button type="button" class="btn-primary btn-sm" id="btnRetryGps" style="display: none; white-space: nowrap;">Retry GPS Permission</button>
+        </div>
+      </div>
+
+      <!-- Follow-up Alert Box (Visible when Admin requests follow-up) -->
+      <div class="follow-up-alert-box" id="bannerFollowUpBox" style="display: none;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <div>
+          <div class="follow-up-alert-title">Administrator Follow-Up Requested</div>
+          <div class="follow-up-alert-text" id="bannerFollowUpText">Operations Center requested additional slope assessment.</div>
+        </div>
+      </div>
+
+      <div class="active-mission-grid">
+        <div class="active-mission-stat">
+          <span class="active-mission-stat-label">Location / Corridor</span>
+          <span class="active-mission-stat-value" id="bannerLocation">--</span>
+        </div>
+        <div class="active-mission-stat">
+          <span class="active-mission-stat-label">GPS Coordinates</span>
+          <span class="active-mission-stat-value" id="bannerCoords">--</span>
+        </div>
+        <div class="active-mission-stat">
+          <span class="active-mission-stat-label">Straight-Line Distance</span>
+          <span class="active-mission-stat-value highlight" id="bannerDistance">--</span>
+        </div>
+        <div class="active-mission-stat">
+          <span class="active-mission-stat-label">Priority Level</span>
+          <span class="active-mission-stat-value highlight" id="bannerPriority">HIGH</span>
+        </div>
+      </div>
+
+      <!-- Mission Details & Photos Section (Requirement 1.4) -->
+      <div id="bannerDetailsSection" style="margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.08); display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px;">
+          <span style="font-size: 0.75rem; font-weight: 700; color: var(--rescue-text-muted); text-transform: uppercase;">Citizen Description & Objectives</span>
+          <span id="bannerAssignedAt" style="font-size: 0.75rem; color: var(--rescue-text-muted); font-family: 'JetBrains Mono', monospace;">Assigned: --</span>
+        </div>
+        <div id="bannerDescription" style="font-size: 0.84rem; color: var(--rescue-text); line-height: 1.45;">--</div>
+        <div id="bannerInstructions" style="font-size: 0.8rem; color: #166534; background: #F0FDF4; padding: 6px 10px; border-radius: 4px; border-left: 3px solid #16A34A; display: none;"></div>
+        <div id="bannerPhotosContainer" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;"></div>
+      </div>
+
+      <div class="active-mission-actions">
+        <div style="font-size: 0.8125rem; color: var(--rescue-text-secondary);">
+          <strong>Operational Protocol:</strong> Review ground observation and accept mission before initiating active GPS transit.
+        </div>
+        <div class="active-mission-btn-group" id="bannerActionButtons">
+          <!-- Dynamic Action Buttons rendered via JavaScript -->
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         6 Key Operational Metrics Grid
+         ========================================================================= -->
+    <section class="rescue-kpi-grid">
+      <!-- 1. New Assignments -->
+      <div class="rescue-kpi-card kpi-new" id="kpiNew" title="Click to filter new assignments">
+        <div class="rescue-kpi-top">
+          <span class="rescue-kpi-label">New Assignments</span>
+          <div class="rescue-kpi-icon">📋</div>
+        </div>
+        <span class="rescue-kpi-number" id="kpiCountNew">0</span>
+      </div>
+
+      <!-- 2. Active Operations -->
+      <div class="rescue-kpi-card kpi-active" id="kpiActive" title="Click to filter active operations">
+        <div class="rescue-kpi-top">
+          <span class="rescue-kpi-label">Active Missions</span>
+          <div class="rescue-kpi-icon">⚡</div>
+        </div>
+        <span class="rescue-kpi-number" id="kpiCountActive">0</span>
+      </div>
+
+      <!-- 3. In Transit -->
+      <div class="rescue-kpi-card kpi-transit" id="kpiTransit" title="Click to filter teams in transit">
+        <div class="rescue-kpi-top">
+          <span class="rescue-kpi-label">In Transit</span>
+          <div class="rescue-kpi-icon">🚑</div>
+        </div>
+        <span class="rescue-kpi-number" id="kpiCountTransit">0</span>
+      </div>
+
+      <!-- 4. On Scene -->
+      <div class="rescue-kpi-card kpi-scene" id="kpiScene" title="Click to filter on scene missions">
+        <div class="rescue-kpi-top">
+          <span class="rescue-kpi-label">On Scene</span>
+          <div class="rescue-kpi-icon">📍</div>
+        </div>
+        <span class="rescue-kpi-number" id="kpiCountScene">0</span>
+      </div>
+
+      <!-- 5. Awaiting Review -->
+      <div class="rescue-kpi-card kpi-review" id="kpiReview" title="Click to filter outcomes awaiting review">
+        <div class="rescue-kpi-top">
+          <span class="rescue-kpi-label">Awaiting Review</span>
+          <div class="rescue-kpi-icon">🔍</div>
+        </div>
+        <span class="rescue-kpi-number" id="kpiCountReview">0</span>
+      </div>
+
+      <!-- 6. Follow-up Required -->
+      <div class="rescue-kpi-card kpi-followup" id="kpiFollowup" title="Click to filter follow-up requests">
+        <div class="rescue-kpi-top">
+          <span class="rescue-kpi-label">Follow-Up Required</span>
+          <div class="rescue-kpi-icon">⚠️</div>
+        </div>
+        <span class="rescue-kpi-number" id="kpiCountFollowup">0</span>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         Main Grid: Missions List (Left) + Tactical Map (Right)
+         ========================================================================= -->
+    <div class="rescue-main-grid">
+
+      <!-- Left Column: Worklist & Missions -->
+      <div class="rescue-panel">
+        <div class="rescue-panel-header">
+          <h3 class="rescue-panel-title">
+            <span>Assigned Rescue Force Missions</span>
+          </h3>
+          <div style="font-size: 0.775rem; color: var(--rescue-text-muted);">
+            Real-time feed
+          </div>
+        </div>
+
+        <div class="rescue-controls-bar">
+          <div class="rescue-search-box">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" id="missionSearch" placeholder="Search mission by location, category, ID..." />
+          </div>
+
+          <div class="rescue-filter-pills">
+            <button type="button" class="filter-pill active" data-filter="all">All</button>
+            <button type="button" class="filter-pill" data-filter="new">New</button>
+            <button type="button" class="filter-pill" data-filter="transit">In Transit</button>
+            <button type="button" class="filter-pill" data-filter="scene">On Scene</button>
+            <button type="button" class="filter-pill" data-filter="review">Review</button>
+            <button type="button" class="filter-pill" data-filter="followup">Follow-Up</button>
+          </div>
+        </div>
+
+        <div class="rescue-missions-list" id="missionsList">
+          <!-- Dynamic cards rendered via JavaScript -->
+        </div>
+      </div>
+
+      <!-- Right Column: Interactive Leaflet Tactical Map -->
+      <div class="rescue-panel">
+        <div class="rescue-panel-header">
+          <h3 class="rescue-panel-title">
+            <span>Tactical Operations Map</span>
+          </h3>
+          <div class="gps-live-display">
+            GPS: Real-time Telemetry
+          </div>
+        </div>
+
+        <div class="tactical-map-container">
+          <div id="rescueMap"></div>
+
+          <!-- Map Legend Overlay -->
+          <div class="map-floating-overlay">
+            <div class="map-legend-item">
+              <span class="map-legend-indicator incident"></span>
+              <span>Incident Ground Zero</span>
+            </div>
+            <div class="map-legend-item">
+              <span class="map-legend-indicator team"></span>
+              <span>Rescue Force Unit</span>
+            </div>
+            <div class="map-legend-item">
+              <span class="map-legend-indicator trail"></span>
+              <span>GPS Journey Trail</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="map-controls-row">
+          <div style="font-size: 0.75rem; color: var(--rescue-text-secondary);">
+            OpenStreetMap GIS Telemetry Layer
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn-outline btn-sm" id="btnCenterIncident">Focus Incident</button>
+            <button type="button" class="btn-outline btn-sm" id="btnCenterTeam">Focus Force</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- =========================================================================
+       Footer: Legal & Operational Notice
+       ========================================================================= -->
+  <footer class="rescue-footer">
+    <div>
+      <strong style="color: var(--rescue-forest);">SlopeGuard Rescue Force Dispatch &bull; North Eastern Region (NER)</strong>
+      <div style="margin-top: 2px;">Assigned field units must maintain continuous GPS broadcast during active transit.</div>
+    </div>
+    <div>
+      All submitted outcomes require official State Disaster Management Authority (SDMA) adjudication prior to case closure.
+    </div>
+  </footer>
+
+  <!-- =========================================================================
+       MODALS
+       ========================================================================= -->
+
+  <!-- 1. Decline Assignment Modal -->
+  <div class="rescue-modal-backdrop" id="declineModal">
+    <div class="rescue-modal">
+      <div class="rescue-modal-header">
+        <h3 class="rescue-modal-title">Decline Mission Assignment</h3>
+        <button type="button" class="rescue-modal-close" data-close-modal="declineModal">&times;</button>
+      </div>
+      <form id="declineForm">
+        <div class="rescue-modal-body">
+          <p style="font-size: 0.8125rem; color: var(--rescue-text-secondary); margin: 0;">
+            A mandatory justification is required when declining an assigned operation. This will return the incident to the Operations Center for immediate reallocation.
+          </p>
+
+          <div class="form-group">
+            <label class="form-label required" for="declineReason">Reason for Declining</label>
+            <textarea id="declineReason" class="form-textarea" placeholder="Detail operational constraint, impassable corridor, or existing deployment..." required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Quick Select Predefined Reasons</label>
+            <div class="preset-reasons-group">
+              <span class="preset-chip">Corridor fully blocked by heavy structural landslide</span>
+              <span class="preset-chip">Team currently engaged in critical casualty evacuation</span>
+              <span class="preset-chip">Specialized mechanical hydraulic excavator required</span>
+              <span class="preset-chip">Incident outside designated district sector boundary</span>
+            </div>
+          </div>
+        </div>
+        <div class="rescue-modal-footer">
+          <button type="button" class="btn-outline" data-close-modal="declineModal">Cancel</button>
+          <button type="submit" class="btn-primary" style="background-color: #DC2626; border-color: #DC2626;">Confirm Decline</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. Log Field Progress Modal -->
+  <div class="rescue-modal-backdrop" id="progressModal">
+    <div class="rescue-modal">
+      <div class="rescue-modal-header">
+        <h3 class="rescue-modal-title">Log Field Progress Update</h3>
+        <button type="button" class="rescue-modal-close" data-close-modal="progressModal">&times;</button>
+      </div>
+      <form id="progressForm">
+        <div class="rescue-modal-body">
+          <div class="form-group">
+            <label class="form-label required" for="progressAssessment">Site Assessment Findings</label>
+            <textarea id="progressAssessment" class="form-textarea" placeholder="Describe slope stability, debris volume, soil saturation, structural impact..." required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="progressPassability">Road / Corridor Passability</label>
+            <select id="progressPassability" class="form-select">
+              <option value="CLEAR">CLEAR &bull; Normal Vehicular Flow</option>
+              <option value="PARTIALLY_BLOCKED" selected>PARTIALLY BLOCKED &bull; Single-Lane / Slow Flow</option>
+              <option value="IMPASSABLE">IMPASSABLE &bull; Fully Severed Corridor</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Observed Secondary Hazards</label>
+            <div class="checkbox-grid">
+              <label class="checkbox-label">
+                <input type="checkbox" name="hazards" value="Downed electrical lines">
+                <span>Downed power lines</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" name="hazards" value="Active secondary mudflow">
+                <span>Active mudflow</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" name="hazards" value="Gas/Fuel line rupture">
+                <span>Gas / Fuel rupture</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" name="hazards" value="Flash flooding / Surge">
+                <span>Flooding / Water surge</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" name="hazards" value="Unstable upper boulders">
+                <span>Unstable hanging boulders</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" name="hazards" value="Structural foundation damage">
+                <span>Foundation failure</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="progressActions">Immediate Actions Taken</label>
+            <textarea id="progressActions" class="form-textarea" placeholder="Detail perimeter cordoned, traffic diverted, evacuation initiated..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="progressResources">Resources Deployed / Requested</label>
+            <input type="text" id="progressResources" class="form-input" placeholder="e.g. 1x JCB Backhoe, 2x Medical Ambu, K9 Search Unit" />
+          </div>
+
+          <!-- Photo Upload & Evidence -->
+          <div class="form-group">
+            <label class="form-label">Attach On-Site Photographs</label>
+            <div class="photo-upload-zone" id="photoDropZone">
+              <div style="font-size: 1.5rem; margin-bottom: 4px;">📷</div>
+              <strong style="color: var(--rescue-forest);">Click to capture or upload field photos</strong>
+              <div style="font-size: 0.75rem; color: var(--rescue-text-muted); margin-top: 2px;">Supported: JPG, PNG, WebP</div>
+              <input type="file" id="photoFileInput" accept="image/*" multiple style="display: none;" />
+            </div>
+            <div class="photo-previews-grid" id="photoPreviews"></div>
+          </div>
+        </div>
+        <div class="rescue-modal-footer">
+          <button type="button" class="btn-outline" data-close-modal="progressModal">Cancel</button>
+          <button type="submit" class="btn-primary">Transmit Progress Update</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. Submit Final Outcome Modal -->
+  <div class="rescue-modal-backdrop" id="outcomeModal">
+    <div class="rescue-modal">
+      <div class="rescue-modal-header">
+        <h3 class="rescue-modal-title">Submit Response Outcome for Verification</h3>
+        <button type="button" class="rescue-modal-close" data-close-modal="outcomeModal">&times;</button>
+      </div>
+      <form id="outcomeForm">
+        <div class="rescue-modal-body">
+          <div style="padding: 10px 14px; background: #DBEAFE; border-left: 3px solid #2563EB; border-radius: 4px; font-size: 0.8125rem; color: #1E40AF;">
+            <strong>Adjudication Notice:</strong> Submitting this outcome report transitions the incident into <strong>Under Review (Awaiting Verification)</strong>. Final completion is authorized exclusively by SDMA Administrators.
+          </div>
+
+          <div class="form-group">
+            <label class="form-label required" for="outcomeSummary">Operational Resolution Summary</label>
+            <textarea id="outcomeSummary" class="form-textarea" placeholder="Detail all response outcomes, debris cleared, stabilized perimeter, safety buffer..." required></textarea>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label class="form-label" for="outcomeCasualties">Casualties / Injuries</label>
+              <input type="number" id="outcomeCasualties" class="form-input" min="0" value="0" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="outcomeEvacuations">Persons Evacuated</label>
+              <input type="number" id="outcomeEvacuations" class="form-input" min="0" value="0" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="outcomeInfrastructure">Infrastructure Status</label>
+            <input type="text" id="outcomeInfrastructure" class="form-input" placeholder="e.g. Single-lane restored; culvert cleared; retaining wall cracked" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="outcomeFollowUp">Recommended Engineering Follow-Up</label>
+            <textarea id="outcomeFollowUp" class="form-textarea" placeholder="Recommend geotechnical soil nailing, drainage bypass, DDMA monitoring..."></textarea>
+          </div>
+        </div>
+        <div class="rescue-modal-footer">
+          <button type="button" class="btn-outline" data-close-modal="outcomeModal">Cancel</button>
+          <button type="submit" class="btn-primary">Submit for Admin Verification</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4. Mission Details Modal -->
+  <div class="rescue-modal-backdrop" id="detailsModal">
+    <div class="rescue-modal">
+      <div class="rescue-modal-header">
+        <h3 class="rescue-modal-title">Incident Mission Dossier</h3>
+        <button type="button" class="rescue-modal-close" data-close-modal="detailsModal">&times;</button>
+      </div>
+      <div class="rescue-modal-body" id="detailsModalBody">
+        <!-- Rendered dynamically -->
+      </div>
+      <div class="rescue-modal-footer">
+        <button type="button" class="btn-outline" data-close-modal="detailsModal">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Emergency Helplines Modal -->
+  <div class="rescue-modal-backdrop" id="contactsModal">
+    <div class="rescue-modal" style="max-width: 520px;">
+      <div class="rescue-modal-header">
+        <h3 class="rescue-modal-title">Emergency Rescue Helplines (NER)</h3>
+        <button type="button" class="rescue-modal-close" data-close-modal="contactsModal">&times;</button>
+      </div>
+      <div class="rescue-modal-body">
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div style="padding: 12px; background: #FAF8F2; border: 1px solid #D9C9B2; border-radius: 6px;">
+            <strong style="color: var(--rescue-forest);">NDRF 1st Battalion Control Room (Patgaon, Guwahati)</strong>
+            <div style="font-size: 0.775rem; color: var(--rescue-text-secondary); margin-top: 2px;">Assam, Meghalaya, Tripura, Mizoram Operations</div>
+            <div style="margin-top: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.875rem; color: #DC2626; font-weight: 700;">
+              0361-2840284 &bull; Alt: 1078
+            </div>
+          </div>
+
+          <div style="padding: 12px; background: #FAF8F2; border: 1px solid #D9C9B2; border-radius: 6px;">
+            <strong style="color: var(--rescue-forest);">SDMA State Emergency Operations Center (SEOC)</strong>
+            <div style="font-size: 0.775rem; color: var(--rescue-text-secondary); margin-top: 2px;">Statewide Headquarters Coordination</div>
+            <div style="margin-top: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.875rem; color: #DC2626; font-weight: 700;">
+              1070 (Toll-Free) &bull; 0361-2237219
+            </div>
+          </div>
+
+          <div style="padding: 12px; background: #FAF8F2; border: 1px solid #D9C9B2; border-radius: 6px;">
+            <strong style="color: var(--rescue-forest);">District Disaster Management Authority (DDMA)</strong>
+            <div style="font-size: 0.775rem; color: var(--rescue-text-secondary); margin-top: 2px;">East Khasi Hills / Regional Field Cell</div>
+            <div style="margin-top: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.875rem; color: #DC2626; font-weight: 700;">
+              1077 (District Cell)
+            </div>
+          </div>
+
+          <div style="padding: 12px; background: #FAF8F2; border: 1px solid #D9C9B2; border-radius: 6px;">
+            <strong style="color: var(--rescue-forest);">National Emergency Response Service (Police / Fire / EMS)</strong>
+            <div style="font-size: 0.775rem; color: var(--rescue-text-secondary); margin-top: 2px;">Immediate Dispatch Universal Emergency</div>
+            <div style="margin-top: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.875rem; color: #DC2626; font-weight: 700;">
+              112
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="rescue-modal-footer">
+        <button type="button" class="btn-outline" data-close-modal="contactsModal">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet Library -->
+  <script src="js/leaflet.js"></script>
+
+  <!-- Core JavaScript Services -->
+  <script src="js/core/config.js"></script>
+  <script src="js/core/content.js"></script>
+  <script src="js/core/format.js"></script>
+  <script src="js/core/store.js"></script>
+  <script src="js/core/connectivity.js"></script>
+  <script src="js/core/api.js"></script>
+  <script src="js/core/ui.js"></script>
+  <script src="js/core/guard.js"></script>
+
+  <!-- Incident & Rescue Services -->
+  <script src="js/services/reports-storage.js"></script>
+  <script src="js/services/incidents-service.js"></script>
+
+  <!-- Rescue Dashboard Page Controller -->
+  <script src="js/pages/rescue-dashboard.js"></script>
+
+</body>
+</html>

@@ -10,5 +10,6 @@ public enum IncidentCategory {
     ROAD_SUBSIDENCE,
     SLOPE_CRACK,
     EROSION,
+    LANDSLIDE,
     OTHER
 }

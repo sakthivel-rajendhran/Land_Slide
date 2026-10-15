@@ -151,7 +151,7 @@
         <div class="heading-title-group">
           <h1>Account Registry & Role Privilege Control</h1>
           <p class="heading-subtitle">
-            Manage field officer accounts, adjust command privileges, and oversee authorized disaster surveillance personnel.
+            Manage rescue force personnel accounts, adjust command privileges, and oversee authorized disaster response units.
           </p>
         </div>
       </section>
@@ -173,7 +173,7 @@
           <table class="dashboard-table">
             <thead>
               <tr>
-                <th>Officer / User</th>
+                <th>Personnel / User</th>
                 <th>Official Email</th>
                 <th>Security Role</th>
                 <th>Assigned Jurisdiction</th>
@@ -218,8 +218,8 @@
       const STORAGE_KEY = "sg_admin_user_registry";
       const initialUsers = [
         { id: 1, name: "NER Command Admin", email: "admin@slopeguard.ner.gov.in", role: "admin", district: "NER Headquarters (Guwahati)", locationStatus: "Location Not Provided", status: "active" },
-        { id: 2, name: "Field Officer Sharma", email: "officer@slopeguard.ner.gov.in", role: "officer", district: "Dima Hasao / Haflong Command", locationStatus: "Location Provided", status: "active" },
-        { id: 3, name: "Dr. P. Lyngdoh (Geotechnical)", email: "geology@meghalaya.sdma.gov.in", role: "officer", district: "East Khasi Hills (Shillong)", locationStatus: "Location Provided", status: "active" },
+        { id: 2, name: "Rescue Force Unit (Sharma)", email: "officer@slopeguard.ner.gov.in", role: "rescue_force", district: "Dima Hasao / Haflong Command", locationStatus: "Location Provided", status: "active" },
+        { id: 3, name: "Dr. P. Lyngdoh (Geotechnical)", email: "geology@meghalaya.sdma.gov.in", role: "rescue_force", district: "East Khasi Hills (Shillong)", locationStatus: "Location Provided", status: "active" },
         { id: 101, name: "Citizen Monitor (Aizawl)", email: "citizen@aizawl.res.in", role: "user", district: "Aizawl Slopes Corridor", locationStatus: "Location Not Provided", status: "active" }
       ];
 

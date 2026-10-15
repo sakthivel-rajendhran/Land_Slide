@@ -1,115 +1,52 @@
 {
-  "model_name": "SlopeGuard Landslide Classifier (RandomForest)",
   "model_version": "0.1.0-prototype",
   "model_status": "DEMO_NOT_VALIDATED",
-  "output_type": "UNCALIBRATED_HAZARD_SCORE",
-  "evaluation_timestamp": "2026-10-13T17:50:02.611022+00:00",
-  "dataset_metadata": {
-    "source_path": "C:\\Users\\sakth\\OneDrive\\Desktop\\SlopeGuard\\ai-service\\data\\verified_historical\\historical_events_northeast_india.csv",
-    "is_synthetic": false,
-    "total_records": 20,
-    "train_record_count": 14,
-    "test_record_count": 6,
-    "test_split_ratio": 0.3,
-    "split_strategy": "chronological_temporal_holdout",
-    "train_date_range": [
-      "2015-06-14T08:00:00Z",
-      "2021-06-18T10:00:00Z"
-    ],
-    "test_date_range": [
-      "2022-06-16T15:00:00Z",
-      "2023-07-20T11:00:00Z"
-    ],
-    "test_class_distribution": {
-      "class_0_stable": 3,
-      "class_1_landslide": 3
-    }
-  },
-  "model_metrics": {
+  "evaluation_timestamp": "2026-10-14T04:43:53.127203+00:00",
+  "test_split_size": 13,
+  "split_method": "temporal_holdout",
+  "metrics": {
     "accuracy": 1.0,
     "precision": 1.0,
     "recall": 1.0,
     "f1_score": 1.0,
     "roc_auc": 1.0,
     "pr_auc": 1.0,
-    "false_alarm_rate": 0.0,
-    "missed_event_rate": 0.0,
-    "confusion_matrix": {
-      "true_negatives": 3,
-      "false_positives": 0,
-      "false_negatives": 0,
-      "true_positives": 3
-    }
-  },
-  "baseline_comparisons": {
-    "majority_class_baseline": {
-      "baseline_name": "Majority Class Baseline (Always predicts 0)",
-      "accuracy": 0.5,
-      "precision": 0.0,
-      "recall": 0.0,
-      "f1_score": 0.0
-    },
-    "domain_heuristic_baseline": {
-      "baseline_name": "Physical Heuristic Rule (Slope >= 30\u00b0 & Rainfall >= 40mm)",
-      "accuracy": 0.8333,
-      "precision": 1.0,
-      "recall": 0.6667,
-      "f1_score": 0.8
-    }
-  },
-  "calibration_analysis": {
-    "brier_score_uncalibrated": 0.0038,
-    "calibration_status": "CALIBRATION_DEFERRED",
-    "deployed_calibration_mapping": null,
-    "scientific_rationale": "Probability calibration (Platt Sigmoid / Isotonic Regression) is explicitly DEFERRED. Current dataset contains 20 records (synthetic or small prototype sample). Fitting an empirical calibration curve on an under-sampled or synthetic distribution creates deceptive confidence curves and misleads decision-makers into treating arbitrary model scores as true Bayesian probabilities. The output remains an UNCALIBRATED_HAZARD_SCORE.",
-    "sample_size_requirement": ">= 100 verified multi-monsoon field observations",
-    "current_sample_size": 20
-  },
-  "candidate_threshold_evaluation": {
-    "candidate_set_id": "TH-NE-INDIA-V1-CANDIDATE",
-    "version": "1.0.0-candidate",
-    "review_status": "PENDING_EXPERT_REVIEW",
-    "threshold_cutoffs": {
-      "LOW": [
-        0.0,
-        0.3
+    "confusion_matrix": [
+      [
+        6,
+        0
       ],
-      "MODERATE": [
-        0.3,
-        0.6
-      ],
-      "HIGH": [
-        0.6,
-        0.8
-      ],
-      "SEVERE": [
-        0.8,
-        1.0
+      [
+        0,
+        7
       ]
-    },
-    "expert_review_required": true
+    ],
+    "class_distribution_test": {
+      "class_0_count": 6,
+      "class_1_count": 7
+    }
+  },
+  "calibration": {
+    "brier_score_uncalibrated": 0.0001,
+    "status": "CALIBRATION_DEFERRED",
+    "reason": "Insufficient sample size or synthetic fixtures used. Probability calibration (Platt/Isotonic) on synthetic data would yield deceptive confidence curves for real-world deployment. Deferred until verified field data is ingested."
   },
   "feature_importances": {
-    "elevation_m": 0.2311,
-    "vegetation_ndvi": 0.1722,
-    "slope_deg": 0.1588,
-    "lithology_Unconsolidated_Debris": 0.1541,
-    "aspect_deg": 0.0607,
-    "soil_type_Sandy_Loam": 0.0539,
-    "rainfall_24h_mm": 0.0491,
-    "lithology_Metamorphic": 0.0322,
-    "rainfall_72h_mm": 0.03,
-    "lithology_Sedimentary": 0.0198,
-    "latitude": 0.0158,
-    "longitude": 0.0127,
-    "soil_type_Clay_Loam": 0.0068,
-    "soil_type_Gravelly_Soil": 0.003
+    "slope_deg": 0.1892,
+    "vegetation_ndvi": 0.1828,
+    "aspect_deg": 0.1772,
+    "rainfall_72h_mm": 0.1572,
+    "rainfall_24h_mm": 0.1321,
+    "soil_type_Gravelly_Soil": 0.0465,
+    "lithology_Sedimentary": 0.0456,
+    "soil_type_Clay_Loam": 0.0371,
+    "longitude": 0.013,
+    "latitude": 0.0084,
+    "lithology_Unconsolidated_Debris": 0.0042,
+    "lithology_Metamorphic": 0.0039,
+    "elevation_m": 0.0028,
+    "soil_type_Sandy_Loam": 0.0
   },
-  "limitations_and_uncertainty": [
-    "Metrics reflect demonstration/prototype data only; do not represent real-world deployment performance.",
-    "Rainfall observations from ERA5 reanalysis have ~11km grid smoothing and do not replace physical gauge networks.",
-    "Absence of field-verified landslide negative inventories in steep unmonitored slopes requires valley proxy sampling.",
-    "Ensemble score (0.0 to 1.0) must NOT be communicated as a certified percentage chance of slope failure."
-  ],
+  "feature_importance_limitation": "Gini-based feature importances indicate internal tree split frequency only and do not imply geotechnical or physical causality.",
   "disclaimer": "EXPERIMENTAL PROTOTYPE: This AI-generated risk score is an uncalibrated mathematical estimate based on a demonstration pipeline. It is not an official disaster warning, evacuation trigger, or geotechnical certification of slope stability."
 }

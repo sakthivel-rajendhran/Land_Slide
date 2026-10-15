@@ -108,6 +108,13 @@ window.LW.RiskMap = {
 
       regions.forEach(r => {
         if (!r.lat || !r.lng) return;
+        if (currentFilters.query && currentFilters.query.trim()) {
+          const q = currentFilters.query.toLowerCase().trim();
+          const match = (r.name || "").toLowerCase().includes(q) ||
+                        (r.district || "").toLowerCase().includes(q) ||
+                        (r.state || "").toLowerCase().includes(q);
+          if (!match) return;
+        }
         if (r.risk_level === "critical" || r.risk_level === "high") {
           const color = r.risk_level === "critical" ? "#F07878" : "#F1A46B";
           const radiusMeters = r.risk_level === "critical" ? 18000 : 12000;
@@ -141,6 +148,13 @@ window.LW.RiskMap = {
       if (!activeLayers.assessments) return;
 
       const filtered = regions.filter(region => {
+        if (currentFilters.query && currentFilters.query.trim()) {
+          const q = currentFilters.query.toLowerCase().trim();
+          const match = (region.name || "").toLowerCase().includes(q) ||
+                        (region.district || "").toLowerCase().includes(q) ||
+                        (region.state || "").toLowerCase().includes(q);
+          if (!match) return false;
+        }
         if (currentFilters.risk !== "all" && region.risk_level !== currentFilters.risk) {
           return false;
         }
@@ -187,6 +201,15 @@ window.LW.RiskMap = {
         if (!loc.latitude || !loc.longitude) return;
 
         // Apply filters
+        if (currentFilters.query && currentFilters.query.trim()) {
+          const q = currentFilters.query.toLowerCase().trim();
+          const match = (incident.id || "").toLowerCase().includes(q) ||
+                        (incident.incidentType || "").toLowerCase().includes(q) ||
+                        (incident.description || "").toLowerCase().includes(q) ||
+                        ((loc.placeName) || "").toLowerCase().includes(q) ||
+                        ((loc.roadName) || "").toLowerCase().includes(q);
+          if (!match) return;
+        }
         if (currentFilters.incidentCategory !== "all" && incident.incidentType !== currentFilters.incidentCategory && incident.category !== currentFilters.incidentCategory) {
           return;
         }

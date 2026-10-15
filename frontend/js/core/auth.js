@@ -97,47 +97,61 @@ window.LW.auth = (function() {
       throw new Error("Invalid credentials or unauthorized station. Please verify your details.");
     },
 
-    async register({ fullName, email, password, district = "NER Command", location = null }) {
-      if (!email || !password) {
-        throw new Error("Please provide email and security password.");
+    async register({ fullName, email, password, district = "NER Command", location = null, phoneNumber = null }) {
+      if (!fullName || !fullName.trim()) {
+        throw new Error("Please enter your full name.");
+      }
+      if (fullName.trim().length < 2) {
+        throw new Error("Full name must be at least 2 characters.");
+      }
+      if (!email || !email.trim()) {
+        throw new Error("Please enter a valid official email address.");
+      }
+      if (!password || password.length < 8) {
+        throw new Error("Security password must be at least 8 characters long.");
       }
 
       if (!window.LW.api) {
         throw new Error("Authentication service is unavailable.");
       }
 
-      const res = await window.LW.api.post("/api/auth/register", {
-        name: fullName,
-        fullName,
+      const payload = {
+        fullName: fullName.trim(),
         email: email.trim(),
-        username: email.trim(),
-        password,
-        district,
-        location
-      });
+        password: password
+      };
+      if (phoneNumber) payload.phoneNumber = phoneNumber.trim();
 
-      if (res && (res.token || res.data?.token || res.userId || res.data?.userId || res.id)) {
+      const res = await window.LW.api.post("/api/auth/register", payload);
+
+      if (res && (res.token || res.data?.token)) {
+        const token = res.token || res.data?.token;
         const u = res.token ? res : (res.data || res);
         const normalizedUser = {
           ...u,
           id: u.userId || u.id,
           userId: u.userId || u.id,
-          name: u.fullName || u.name,
-          fullName: u.fullName || u.name,
-          email: u.email,
+          name: u.fullName || u.name || fullName.trim(),
+          fullName: u.fullName || u.name || fullName.trim(),
+          email: u.email || email.trim(),
           role: (u.role || "CITIZEN").toLowerCase(),
           roles: [ (u.role || "CITIZEN").toLowerCase() ],
-          district: u.district || district,
-          token: u.token || res.token
+          district: district || "NER Command",
+          location: location || null,
+          token: token
         };
-        if (normalizedUser.token && typeof localStorage !== "undefined") {
-          localStorage.setItem("sg_token", normalizedUser.token);
+        if (typeof localStorage !== "undefined") {
+          localStorage.setItem("sg_token", token);
+        }
+        if (typeof sessionStorage !== "undefined") {
+          sessionStorage.setItem("sg_token", token);
         }
         setStoredUser(normalizedUser, true);
         return normalizedUser;
       }
 
-      throw new Error("Registration failed.");
+      // If response did not include a token, perform auto-login to obtain genuine JWT Bearer token
+      return await this.login(email.trim(), password, true);
     },
 
     async loginWithGoogle(credentialOrProfile) {

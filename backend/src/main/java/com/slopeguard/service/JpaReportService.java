@@ -412,7 +412,7 @@ public class JpaReportService implements ReportService {
             }
         }
 
-        return new ReportResponse(
+        ReportResponse response = new ReportResponse(
                 report.getId(),
                 report.getIncidentCategory(),
                 report.getDescription(),
@@ -425,6 +425,9 @@ public class JpaReportService implements ReportService {
                 report.getEnvironmentalObservations(),
                 photoResponses
         );
+        response.setReviewNotes(report.getReviewNotes());
+        response.setStatusUpdatedAt(report.getStatusUpdatedAt());
+        return response;
     }
 
     private AdminReportResponse mapToAdminResponse(IncidentReport report) {

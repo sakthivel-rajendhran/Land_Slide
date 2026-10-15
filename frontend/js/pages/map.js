@@ -78,7 +78,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     if (riskMapInstance) {
-      riskMapInstance.setFilters({ risk, dataStatus });
+      riskMapInstance.setFilters({ query: q, risk, dataStatus });
     }
 
     renderTableView(currentFiltered);

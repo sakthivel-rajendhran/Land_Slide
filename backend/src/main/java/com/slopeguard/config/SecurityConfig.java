@@ -54,6 +54,9 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Public CORS preflight requests (permitted unconditionally)
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
                         // Public system health, discovery, and documentation endpoints
                         .requestMatchers(HttpMethod.GET, "/api", "/api/health").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
@@ -93,8 +96,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/reports").authenticated()
 
                         // Module 1 Alert Workflow and Area Management RBAC
-                        .requestMatchers("/api/admin/alerts/**").hasAnyRole("ADMIN", "OFFICER")
-                        .requestMatchers(HttpMethod.GET, "/api/admin/areas/**").hasAnyRole("ADMIN", "OFFICER")
+                        .requestMatchers("/api/admin/alerts/**").hasAnyRole("ADMIN", "RESCUE_FORCE", "OFFICER")
+                        .requestMatchers(HttpMethod.GET, "/api/admin/areas/**").hasAnyRole("ADMIN", "RESCUE_FORCE", "OFFICER")
+                        .requestMatchers("/api/rescue/**").hasAnyRole("ADMIN", "RESCUE_FORCE", "OFFICER")
                         .requestMatchers("/api/admin/areas/**").hasRole("ADMIN")
                         .requestMatchers("/api/admin/users/**").hasRole("ADMIN")
 

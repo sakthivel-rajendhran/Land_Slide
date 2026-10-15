@@ -23,7 +23,7 @@ public class RegisterRequest {
     private String email;
 
     @NotBlank(message = "Password is required")
-    @Size(min = 12, max = 128, message = "Password must be at least 12 characters in length")
+    @Size(min = 8, max = 128, message = "Password must be at least 8 characters in length")
     private String password;
 
     @Pattern(regexp = "^$|^[+0-9\\-\\s()]{7,20}$", message = "Phone number must be a valid format between 7 and 20 digits if supplied")

@@ -30,12 +30,22 @@ public class SecurityBeansConfig {
      */
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        grantedAuthoritiesConverter.setAuthorityPrefix("ROLE_");
-        grantedAuthoritiesConverter.setAuthoritiesClaimName("role");
-
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-        converter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
+        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
+            java.util.Set<org.springframework.security.core.GrantedAuthority> authorities = new java.util.HashSet<>();
+            String role = jwt.getClaimAsString("role");
+            if (role != null) {
+                String roleUpper = role.toUpperCase();
+                authorities.add(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + roleUpper));
+                // Bidirectional compatibility mapping between RESCUE_FORCE and OFFICER
+                if ("RESCUE_FORCE".equals(roleUpper)) {
+                    authorities.add(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_OFFICER"));
+                } else if ("OFFICER".equals(roleUpper)) {
+                    authorities.add(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_RESCUE_FORCE"));
+                }
+            }
+            return authorities;
+        });
         return converter;
     }
 }

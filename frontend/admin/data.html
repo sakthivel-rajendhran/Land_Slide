@@ -31,7 +31,7 @@
             return;
           }
           var role = (user.role || "").toUpperCase();
-          if (role !== "ADMIN" && role !== "OFFICER") {
+          if (role !== "ADMIN" && role !== "OFFICER" && role !== "RESCUE_FORCE") {
             window.location.replace("../dashboard.html");
           }
         } catch (e) {
@@ -293,12 +293,12 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      if (!window.LW.guard.requireRole(["officer", "admin"])) return;
+      if (!window.LW.guard.requireRole(["rescue_force", "officer", "admin"])) return;
       const user = window.LW.auth.getUser();
 
       document.getElementById("sidebarName").textContent = user.name || "Command Staff";
       document.getElementById("sidebarAvatar").textContent = (user.name || "A").charAt(0).toUpperCase();
-      document.getElementById("sidebarRole").textContent = `${(user.role || 'OFFICER').toUpperCase()} • ${user.district || 'NER'}`;
+      document.getElementById("sidebarRole").textContent = `${(user.role || 'RESCUE_FORCE').toUpperCase()} • ${user.district || 'NER'}`;
 
       document.getElementById("sidebarLogout").onclick = async () => {
         await window.LW.auth.logout();

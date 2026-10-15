@@ -1,7 +1,7 @@
 {
   "model_version": "0.1.0-prototype",
   "model_status": "DEMO_NOT_VALIDATED",
-  "training_timestamp": "2026-10-13T17:50:02.334216+00:00",
+  "training_timestamp": "2026-10-14T04:43:53.127203+00:00",
   "algorithm": "RandomForestClassifier",
   "hyperparameters": {
     "n_estimators": 100,
@@ -12,7 +12,7 @@
     "class_weight": "balanced"
   },
   "training_dataset": {
-    "source_path": "C:\\Users\\sakth\\OneDrive\\Desktop\\SlopeGuard\\ai-service\\data\\synthetic_fixtures.csv",
+    "source_path": "E:\\PROJECTS 2K26\\landslide\\dataset\\processed\\synthetic_fixtures.csv",
     "total_records": 50,
     "is_synthetic": true,
     "class_distribution": {

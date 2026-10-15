@@ -64,6 +64,33 @@ public class JpaUserService implements UserService {
             provisionAdmin(adminProvisionName, adminProvisionEmail, adminProvisionPassword);
             log.info("Initialized/verified administrative account for: {}", normalizeEmail(adminProvisionEmail));
         }
+
+        // Provision default Rescue Force units for operational assignment workflows
+        ensureRescueForceAccount("Er. T. Lyngdoh (Rescue Force Alpha)", "officer@slopeguard.ner.gov.in", "OfficerPass123!");
+        ensureRescueForceAccount("Er. R. Barman (Rescue Force Bravo)", "officer.bravo@slopeguard.ner.gov.in", "OfficerPass123!");
+    }
+
+    private void ensureRescueForceAccount(String fullName, String email, String rawPassword) {
+        String normalized = normalizeEmail(email);
+        Optional<User> existing = userRepository.findByEmail(normalized);
+        if (existing.isPresent()) {
+            User u = existing.get();
+            if (u.getRole() != UserRole.RESCUE_FORCE) {
+                u.setRole(UserRole.RESCUE_FORCE);
+                userRepository.save(u);
+            }
+        } else {
+            User u = new User();
+            u.setFullName(fullName);
+            u.setEmail(normalized);
+            u.setPasswordHash(passwordEncoder.encode(rawPassword));
+            u.setRole(UserRole.RESCUE_FORCE);
+            u.setEnabled(true);
+            u.setCreatedAt(LocalDateTime.now());
+            u.setUpdatedAt(LocalDateTime.now());
+            userRepository.save(u);
+            log.info("Provisioned default rescue force account: {}", normalized);
+        }
     }
 
     @Override

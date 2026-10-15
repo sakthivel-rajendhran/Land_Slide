@@ -748,36 +748,41 @@
   <script src="js/services/regions-service.js"></script>
 
   <script>
-    function getSafeDestination() {
+    function getSafeDestination(user) {
       const urlParams = new URLSearchParams(window.location.search);
       const next = urlParams.get("next") || urlParams.get("returnUrl");
-      if (!next) return "dashboard.html";
+      let u = user;
+      if (!u) {
+        try {
+          const raw = sessionStorage.getItem("sg_user") || localStorage.getItem("sg_user");
+          u = raw ? JSON.parse(raw) : null;
+        } catch(e) {}
+      }
+      const role = (u?.role || "").toUpperCase();
+      const isRescue = role === "OFFICER" || role === "RESCUE_FORCE";
+      const defaultDest = role === "ADMIN" ? "admin/dashboard.html" : (isRescue ? "rescue-dashboard.html" : "dashboard.html");
+
+      if (!next) return defaultDest;
 
       try {
         const decoded = decodeURIComponent(next).trim();
+        // Prevent open redirect: Disallow protocol schemes (http:, https:, javascript:, data:) and protocol-relative (//)
         if (decoded.startsWith("//") || /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(decoded)) {
-          return "dashboard.html";
+          return defaultDest;
         }
+        // Prevent redirect loops back to login/signup or deleted landing page anchors
         if (decoded.includes("login.html") || decoded.includes("signup.html") || decoded.includes("#home") || decoded === "index.html") {
-          return "dashboard.html";
+          return defaultDest;
+        }
+        // Enforce RBAC: Non-admin users cannot be redirected to admin dashboard
+        if (decoded.startsWith("admin/") && role !== "ADMIN") {
+          return isRescue ? "rescue-dashboard.html" : "dashboard.html";
         }
         return decoded;
       } catch (e) {
-        return "dashboard.html";
+        return defaultDest;
       }
     }
-
-    const nextDestination = getSafeDestination();
-
-    // If already logged in, redirect immediately
-    (function checkLoggedIn() {
-      try {
-        const raw = sessionStorage.getItem("sg_user") || localStorage.getItem("sg_user");
-        if (raw && JSON.parse(raw)) {
-          window.location.replace(nextDestination);
-        }
-      } catch (e) {}
-    })();
 
     document.addEventListener("DOMContentLoaded", () => {
       const form = document.getElementById("signupForm");
@@ -1044,6 +1049,12 @@
           return;
         }
 
+        if (fullName.length < 2) {
+          showError("Full name must be at least 2 characters.");
+          fullNameInput.focus();
+          return;
+        }
+
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
           showError("Please enter a valid official email address.");
           emailInput.focus();
@@ -1097,14 +1108,16 @@
             if (capturedLocation) {
               window.LW.ui.toast("Account registered with verified location! Geotechnical assessment initiated...", "success");
             } else {
-              window.LW.ui.toast("Account created! Location status marked as 'Not provided'. You can add your location anytime in Settings.", "info");
+              window.LW.ui.toast("Account created successfully! Navigating to your monitoring dashboard...", "success");
             }
           }
+          const destination = getSafeDestination(user);
           setTimeout(() => {
-            window.location.href = nextDestination;
+            window.location.replace(destination);
           }, 450);
         } catch (err) {
-          showError(err.message || "Registration failed. Please verify your connection.");
+          const msg = err.message || (typeof err === "string" ? err : "Registration failed. Please check your details and try again.");
+          showError(msg);
           submitBtn.disabled = false;
           btnSpinner.style.display = "none";
           submitBtnText.textContent = "Create Monitoring Account";

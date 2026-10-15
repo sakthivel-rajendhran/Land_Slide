@@ -8,7 +8,11 @@ package com.slopeguard.model;
  */
 public enum ReportStatus {
     PENDING,
+    SUBMITTED,
     UNDER_REVIEW,
+    ASSIGNED,
+    RESPONDING,
     VERIFIED,
+    RESOLVED,
     REJECTED
 }

@@ -5,6 +5,7 @@ package com.slopeguard.model;
  */
 public enum UserRole {
     CITIZEN,
+    RESCUE_FORCE,
     OFFICER,
     ADMIN
 }

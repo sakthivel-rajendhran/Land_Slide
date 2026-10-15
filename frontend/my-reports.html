@@ -3,16 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Incident Reports — SlopeGuard Citizen Portal</title>
-  <meta name="description" content="Track your submitted road blockage and landslide incident reports, inspect administrative reviews, and monitor verification updates.">
+  <title>My Reports & Tracking — SlopeGuard Citizen Portal</title>
+  <meta name="description" content="Track your submitted landslide and road blockage reports, review geotechnical verification status, and monitor response lifecycle progress.">
 
   <!-- Favicon & PWA Manifest -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><polygon points='12,32 23,6 34,32' fill='%23C7F464'/><polygon points='4,32 16,14 24,32' fill='%23294B32'/></svg>">
   <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#14251A">
+  <meta name="theme-color" content="#2E3A2F">
 
   <!-- Preconnect to Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 
   <!-- Core Design System, Tokens, Components & Shells -->
@@ -20,7 +21,7 @@
   <link rel="stylesheet" href="css/tokens.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/shells.css">
-  <link rel="stylesheet" href="css/pages/dashboard.css">
+  <link rel="stylesheet" href="css/pages/dashboard.css?v=2.0">
 
   <!-- Immediate Authentication Guard -->
   <script>
@@ -46,206 +47,94 @@
   </script>
 
   <style>
-    /* Filter Bar */
-    .filter-pills-bar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 20px;
-    }
-    .filter-pill {
-      background: #FFFFFF;
-      border: 1px solid var(--lw-border, #D9C9B2);
-      color: var(--lw-text-secondary, #445345);
-      font-size: 0.75rem;
-      font-weight: 600;
-      padding: 6px 14px;
-      border-radius: var(--lw-r-sm, 6px);
-      cursor: pointer;
-      transition: all 0.15s ease;
-      font-family: inherit;
-    }
-    .filter-pill:hover {
-      border-color: var(--lw-secondary, #6B7F5B);
-      color: var(--lw-text, #46566A);
-    }
-    .filter-pill.active {
-      background: rgba(201, 111, 79, 0.1);
-      border-color: var(--lw-cta, #C96F4F);
-      color: var(--lw-cta, #C96F4F);
-    }
-
-    /* Reports Grid */
-    .reports-list-grid {
+    /* Report Card Grid */
+    .reports-cards-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
       gap: 20px;
     }
+    @media (max-width: 640px) {
+      .reports-cards-grid {
+        grid-template-columns: 1fr;
+      }
+    }
 
-    .incident-item-card {
+    .report-tracking-card {
       background: #FFFFFF;
-      border: 1px solid var(--lw-border, #D9C9B2);
-      border-radius: var(--lw-r-md, 8px);
+      border: 1px solid #D9C9B2;
+      border-radius: 6px;
       padding: 20px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       gap: 16px;
-      transition: all 0.2s ease;
-      box-shadow: var(--lw-shadow-sm);
+      box-shadow: 0 1px 3px rgba(46, 58, 47, 0.06);
+      transition: all 0.15s ease;
     }
-    .incident-item-card:hover {
-      border-color: var(--lw-secondary, #6B7F5B);
-      box-shadow: var(--lw-shadow-md);
+    .report-tracking-card:hover {
+      border-color: #6B7F5B;
+      box-shadow: 0 4px 12px rgba(46, 58, 47, 0.08);
       transform: translateY(-2px);
     }
 
-    .incident-card-top {
+    .report-card-header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       gap: 10px;
+      margin-bottom: 6px;
     }
-    .incident-card-ref {
-      font-family: inherit;
-      font-size: 0.75rem;
+    .report-ref-badge {
+      font-family: monospace;
+      font-size: 0.8125rem;
       font-weight: 700;
-      color: var(--lw-cta, #C96F4F);
+      color: #C96F4F;
     }
-    .incident-card-type {
+    .report-category-title {
       font-size: 1.05rem;
-      font-weight: 700;
-      color: var(--lw-text, #46566A);
-      margin: 6px 0 4px 0;
-      line-height: 1.35;
+      font-weight: 800;
+      color: #2E3A2F;
+      margin: 4px 0 6px 0;
+    }
+    .report-desc-preview {
+      font-size: 0.8125rem;
+      color: #4A5D48;
+      line-height: 1.45;
+      margin: 0;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
 
-    /* Status Badges */
-    .status-badge {
-      font-size: 0.6875rem;
-      font-weight: 700;
-      padding: 3px 8px;
+    .report-meta-box {
+      background: #F8F6EE;
+      border: 1px solid #D9C9B2;
       border-radius: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      white-space: nowrap;
-    }
-    .status-badge.status-verified {
-      background: rgba(74, 122, 85, 0.12);
-      color: var(--lw-risk-low-fg, #1C4D26);
-      border: 1px solid rgba(74, 122, 85, 0.3);
-    }
-    .status-badge.status-pending {
-      background: rgba(160, 126, 42, 0.12);
-      color: var(--lw-risk-mod-fg, #59440D);
-      border: 1px solid rgba(160, 126, 42, 0.3);
-    }
-    .status-badge.status-review {
-      background: rgba(59, 109, 142, 0.12);
-      color: var(--lw-src-ai-fg, #1E4663);
-      border: 1px solid rgba(59, 109, 142, 0.3);
-    }
-    .status-badge.status-resolved {
-      background: rgba(74, 122, 85, 0.12);
-      color: var(--lw-risk-low-fg, #1C4D26);
-      border: 1px solid rgba(74, 122, 85, 0.3);
-    }
-    .status-badge.status-rejected {
-      background: rgba(184, 75, 41, 0.12);
-      color: var(--lw-risk-crit-fg, #8F2B14);
-      border: 1px solid rgba(184, 75, 41, 0.3);
-    }
-    .status-badge.status-info {
-      background: rgba(184, 107, 46, 0.12);
-      color: var(--lw-risk-high-fg, #6E3B0F);
-      border: 1px solid rgba(184, 107, 46, 0.3);
-    }
-
-    .incident-meta-box {
-      background: var(--lw-bg, #F8F6EE);
-      border: 1px solid var(--lw-border, #D9C9B2);
-      border-radius: var(--lw-r-sm, 6px);
       padding: 10px 12px;
-      font-size: 0.75rem;
+      font-size: 0.775rem;
       display: flex;
       flex-direction: column;
       gap: 6px;
     }
-    .meta-row {
+    .meta-item {
       display: flex;
       justify-content: space-between;
-      color: var(--lw-text-secondary, #445345);
+      color: #5E6F5C;
     }
-    .meta-val {
-      color: var(--lw-text, #46566A);
-      font-weight: 600;
+    .meta-item strong {
+      color: #2E3A2F;
     }
 
-    /* Photos preview strip */
-    .incident-thumbs-strip {
-      display: flex;
-      gap: 8px;
-      overflow-x: auto;
-      padding-bottom: 4px;
-    }
-    .thumb-box {
-      width: 64px;
-      height: 52px;
+    .report-admin-note {
+      background: #FFF8F6;
+      border: 1px solid #D9C9B2;
+      border-left: 3px solid #C58A2B;
       border-radius: 4px;
-      overflow: hidden;
-      border: 1px solid var(--lw-border, #D9C9B2);
-      flex-shrink: 0;
-      cursor: pointer;
-    }
-    .thumb-box img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    /* Modal for Incident Detail & Audit */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(46, 58, 47, 0.4);
-      backdrop-filter: blur(8px);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-    .modal-card {
-      background: #FFFFFF;
-      border: 1px solid var(--lw-border, #D9C9B2);
-      border-radius: var(--lw-r-md, 8px);
-      max-width: 680px;
-      width: 100%;
-      max-height: 90vh;
-      overflow-y: auto;
-      padding: 24px;
-      box-shadow: var(--lw-shadow-lg);
-    }
-
-    @media (max-width: 640px) {
-      .reports-list-grid {
-        grid-template-columns: 1fr;
-        gap: 14px;
-      }
-      .modal-overlay {
-        padding: 12px 8px;
-      }
-      .modal-card {
-        padding: 16px 14px;
-      }
-      .incident-item-card {
-        padding: 16px;
-      }
+      padding: 8px 12px;
+      font-size: 0.75rem;
+      color: #2E3A2F;
+      line-height: 1.4;
     }
   </style>
 </head>
@@ -258,7 +147,7 @@
         <polygon points="4,32 16,14 24,32" fill="#2E3A2F" />
         <polygon points="12,32 23,6 34,32" fill="#C96F4F" />
         <polygon points="23,6 23,24 16,32" fill="#2E3A2F" />
-        <polygon points="23,6 30,19 23,24" fill="#D9FF8F" />
+        <polygon points="23,6 30,19 23,24" fill="#D9C9B2" />
         <polygon points="21,32 30,17 38,32" fill="#6B7F5B" />
       </svg>
       <div class="sidebar-brand-name">Slope<span>Guard</span></div>
@@ -266,53 +155,67 @@
     </div>
 
     <nav class="sidebar-nav">
-      <a href="dashboard.html" class="sidebar-nav-item" data-nav-id="dashboard">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+      <a href="dashboard.html" class="sidebar-nav-item" style="text-decoration: none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
         <span>Dashboard</span>
       </a>
 
-      <a href="dashboard.html?tab=map" class="sidebar-nav-item" data-nav-id="risk-map">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
-        <span>Risk Map Monitoring</span>
+      <a href="dashboard.html?tab=map" class="sidebar-nav-item" style="text-decoration: none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+          <line x1="8" y1="2" x2="8" y2="18"></line>
+          <line x1="16" y1="6" x2="16" y2="22"></line>
+        </svg>
+        <span>Risk Map</span>
       </a>
 
-      <a href="dashboard.html?tab=reports" class="sidebar-nav-item" data-nav-id="reports">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-        <span>Reports</span>
+      <a href="dashboard.html?tab=assessments" class="sidebar-nav-item" style="text-decoration: none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+        </svg>
+        <span>Risk Assessments</span>
       </a>
 
-      <a href="dashboard.html?tab=locations" class="sidebar-nav-item" data-nav-id="locations">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-        <span>Monitored Locations</span>
+      <a href="report-incident.html" class="sidebar-nav-item" style="text-decoration: none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+          <circle cx="12" cy="13" r="4"></circle>
+        </svg>
+        <span>Report an Incident</span>
       </a>
 
-      <a href="report-incident.html" class="sidebar-nav-item" data-nav-id="report-incident">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-        <span>Report Incident</span>
+      <a href="my-reports.html" class="sidebar-nav-item active" style="text-decoration: none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+        </svg>
+        <span>My Reports</span>
       </a>
 
-      <a href="my-reports.html" class="sidebar-nav-item active" data-nav-id="my-reports">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-        <span>My Incident Reports</span>
-      </a>
-
-      <a href="dashboard.html?tab=profile" class="sidebar-nav-item" data-nav-id="profile">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-        <span>Officer Profile</span>
-      </a>
-
-      <a href="settings.html" class="sidebar-nav-item" data-nav-id="settings">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-        <span>Settings & Alerts</span>
+      <a href="dashboard.html?tab=alerts" class="sidebar-nav-item" style="text-decoration: none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+        <span>Alerts & Notifications</span>
       </a>
     </nav>
 
+    <!-- Sidebar Bottom / User Card -->
     <div class="sidebar-footer">
       <div class="sidebar-user-card">
-        <div class="sidebar-user-avatar" id="sidebarAvatar">O</div>
+        <div class="sidebar-user-avatar" id="sidebarAvatar">C</div>
         <div class="sidebar-user-info">
-          <div class="sidebar-user-name" id="sidebarName">NER Field Officer</div>
-          <div class="sidebar-user-role" id="sidebarRole">OFFICER &bull; NER Command</div>
+          <div class="sidebar-user-name" id="sidebarName">Citizen Observer</div>
+          <div class="sidebar-user-role" id="sidebarRole">CITIZEN &bull; Registered Monitor</div>
         </div>
       </div>
       <button type="button" class="btn-sidebar-logout" id="sidebarLogout" data-action="logout">
@@ -330,112 +233,119 @@
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         </button>
         <div class="topbar-breadcrumbs">
-          <span class="topbar-breadcrumbs-root">SlopeGuard Citizen Portal</span>
+          <span class="topbar-breadcrumbs-root">SlopeGuard Citizen</span>
           <span class="topbar-breadcrumbs-sep">/</span>
-          <span class="topbar-breadcrumbs-current">My Submitted Reports</span>
+          <span class="topbar-breadcrumbs-current">My Incident Reports</span>
         </div>
       </div>
 
       <div class="topbar-right">
         <div id="bellSlot"></div>
-        <a href="report-incident.html" class="btn-dashboard-primary" style="text-decoration: none; padding: 7px 14px; font-size: 0.8125rem;">
+        <a href="report-incident.html" class="btn-dashboard-primary" style="text-decoration: none; padding: 7px 16px; font-size: 0.8125rem;">
           + New Report
         </a>
       </div>
     </header>
 
-    <main class="dashboard-body-container" id="mainContent" style="max-width: 1180px; margin: 0 auto; padding: 24px;">
+    <main class="dashboard-body-container" style="max-width: 1120px; margin: 0 auto; padding: 24px;">
 
       <!-- Heading -->
       <section class="dashboard-heading-block" style="margin-bottom: 20px;">
         <div class="heading-title-group">
-          <h1>My Road Blockage & Landslide Incident Reports</h1>
+          <h1>My Reported Incidents & Tracking</h1>
           <p class="heading-subtitle">
-            Track the status of your reported slope hazards, review responses from geotechnical authorities, and verify administrative updates.
+            Follow the review lifecycle of your submitted slope hazard observations. Reports are verified by authorized geotechnical and disaster response authorities.
           </p>
         </div>
         <div class="heading-actions-group">
           <a href="report-incident.html" class="btn-dashboard-primary">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            <span>Report an Observation</span>
+            <span>Report an Incident</span>
           </a>
         </div>
       </section>
 
-      <!-- Status Filter Bar -->
-      <div class="filter-pills-bar" id="statusFilterBar">
-        <button type="button" class="filter-pill active" data-status="all">All Submissions (<span id="countAll">0</span>)</button>
-        <button type="button" class="filter-pill" data-status="pending verification">Pending Verification (<span id="countPending">0</span>)</button>
-        <button type="button" class="filter-pill" data-status="under review">Under Review (<span id="countReview">0</span>)</button>
-        <button type="button" class="filter-pill" data-status="verified">Verified (<span id="countVerified">0</span>)</button>
-        <button type="button" class="filter-pill" data-status="additional info requested">Info Requested (<span id="countInfo">0</span>)</button>
-        <button type="button" class="filter-pill" data-status="resolved">Resolved (<span id="countResolved">0</span>)</button>
-        <button type="button" class="filter-pill" data-status="rejected">Rejected (<span id="countRejected">0</span>)</button>
+      <!-- Search & Status Filter Bar -->
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 20px; flex-wrap: wrap;">
+        <!-- Search -->
+        <div style="position: relative; width: 100%; max-width: 380px;">
+          <svg style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: #5E6F5C; pointer-events: none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="myReportsSearchInput" placeholder="Search my reports by reference, category, location..." style="width: 100%; box-sizing: border-box; padding: 8px 32px 8px 36px; border-radius: 4px; border: 1px solid #D9C9B2; background: #FFFFFF; font-family: inherit; font-size: 0.8125rem; color: #2E3A2F; outline: none;" />
+          <button type="button" id="myReportsSearchClear" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 1.1rem; color: #5E6F5C; cursor: pointer; padding: 2px 6px; line-height: 1;" title="Clear search">&times;</button>
+        </div>
+
+        <!-- Filter Pills Bar -->
+        <div class="filter-pills-bar" id="statusFilterBar" style="margin-bottom: 0;">
+          <button type="button" class="filter-pill active" data-filter="all">All (<span id="countAll">0</span>)</button>
+          <button type="button" class="filter-pill" data-filter="pending">Submitted (<span id="countPending">0</span>)</button>
+          <button type="button" class="filter-pill" data-filter="under_review">Under Review (<span id="countReview">0</span>)</button>
+          <button type="button" class="filter-pill" data-filter="verified">Verified (<span id="countVerified">0</span>)</button>
+          <button type="button" class="filter-pill" data-filter="needs_info">Needs Info (<span id="countNeedsInfo">0</span>)</button>
+        </div>
       </div>
 
       <!-- Reports List Container -->
-      <div id="reportsListWrap">
-        <div style="padding: 40px; text-align: center; color: var(--color-text-muted);">
+      <div id="reportsListContainer">
+        <div style="padding: 40px; text-align: center; color: #5E6F5C;">
           Loading your submitted reports...
         </div>
       </div>
 
-      <!-- DETAIL & AUDIT MODAL -->
-      <div class="modal-overlay" id="detailModal">
-        <div class="modal-card">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; border-bottom: 1px solid var(--color-glass-border); padding-bottom: 12px;">
+      <!-- 6-STAGE STATUS LIFECYCLE MODAL -->
+      <div class="submission-modal-overlay" id="reportLifecycleModal" style="display: none;">
+        <div class="submission-modal-card" style="max-width: 680px; text-align: left;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; border-bottom: 1px solid #D9C9B2; padding-bottom: 10px;">
             <div>
-              <span style="font-family: monospace; font-size: 0.75rem; color: var(--lw-cta, #C96F4F); font-weight: 700;" id="modalRef">INC-XXXX</span>
-              <h2 style="font-size: 1.25rem; color: var(--color-text-primary, #2E3A2F); font-weight: 800; margin: 4px 0 0 0;" id="modalCategory">Incident Title</h2>
+              <span style="font-family: inherit; font-size: 0.75rem; color: #C96F4F; font-weight: 700;" id="modalReportRef">#ID</span>
+              <h2 style="font-size: 1.15rem; font-weight: 800; color: #2E3A2F; margin: 4px 0 0 0;" id="modalReportCategory">Incident Category</h2>
             </div>
-            <button type="button" id="btnCloseDetailModal" style="background: none; border: none; color: var(--color-text-secondary, #4A5D48); font-size: 1.5rem; cursor: pointer;">&times;</button>
+            <button type="button" id="btnCloseLifecycleModal" style="background: none; border: none; font-size: 1.5rem; line-height: 1; cursor: pointer; color: #5E6F5C;">&times;</button>
           </div>
 
-          <div style="margin-bottom: 18px;" id="modalStatusBadgeWrap"></div>
+          <!-- 6-Stage Lifecycle Timeline -->
+          <div style="margin-bottom: 16px;">
+            <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #5E6F5C; margin-bottom: 8px;">
+              Report Status Lifecycle
+            </div>
+            <div id="modalLifecycleTimeline"></div>
+          </div>
 
-          <div class="incident-meta-box" style="margin-bottom: 18px;">
-            <div class="meta-row">
-              <span>Location / Road:</span>
-              <span class="meta-val" id="modalLocation">--</span>
+          <!-- Report Details Box -->
+          <div style="background: #F8F6EE; border: 1px solid #D9C9B2; border-radius: 6px; padding: 14px; margin-bottom: 16px; font-size: 0.8125rem; display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: #4A5D48;">Reported Location:</span>
+              <strong style="color: #2E3A2F;" id="modalReportLocation">--</strong>
             </div>
-            <div class="meta-row">
-              <span>Coordinates:</span>
-              <span class="meta-val" id="modalCoords">--</span>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: #4A5D48;">Coordinates:</span>
+              <span id="modalReportCoords" style="font-family: monospace; color: #2E3A2F;">--</span>
             </div>
-            <div class="meta-row">
-              <span>Road Passability:</span>
-              <span class="meta-val" id="modalPassability">--</span>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: #4A5D48;">Submission Time:</span>
+              <span id="modalReportTime" style="color: #2E3A2F;">--</span>
             </div>
-            <div class="meta-row">
-              <span>Observed At:</span>
-              <span class="meta-val" id="modalObserved">--</span>
-            </div>
-            <div class="meta-row">
-              <span>Submitted At:</span>
-              <span class="meta-val" id="modalSubmitted">--</span>
+            <div style="margin-top: 6px;">
+              <span style="color: #4A5D48; display: block; margin-bottom: 4px;">Incident Description:</span>
+              <div id="modalReportDescription" style="background: #FFFFFF; border: 1px solid #D9C9B2; border-radius: 4px; padding: 10px; color: #2E3A2F; line-height: 1.5;">--</div>
             </div>
           </div>
 
-          <div style="margin-bottom: 18px;">
-            <h4 style="font-size: 0.8125rem; text-transform: uppercase; color: var(--color-text-secondary, #4A5D48); font-weight: 700; margin: 0 0 6px 0;">Description</h4>
-            <div style="font-size: 0.875rem; color: var(--color-text-primary, #2E3A2F); line-height: 1.5; background: var(--lw-bg, #F8F6EE); border: 1px solid var(--lw-border, #D9C9B2); padding: 12px; border-radius: 4px;" id="modalDesc">--</div>
+          <!-- Photo Evidence Strip -->
+          <div style="margin-bottom: 20px;">
+            <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #5E6F5C; margin-bottom: 8px;">
+              Attached Photo Evidence
+            </div>
+            <div id="modalReportPhotos" style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <span style="font-size: 0.8125rem; color: #5E6F5C;">No photographs attached.</span>
+            </div>
           </div>
 
-          <!-- Photo Gallery -->
-          <div style="margin-bottom: 18px;">
-            <h4 style="font-size: 0.8125rem; text-transform: uppercase; color: var(--color-text-secondary, #4A5D48); font-weight: 700; margin: 0 0 8px 0;">Photo Evidence</h4>
-            <div id="modalPhotosGallery" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px;"></div>
-          </div>
-
-          <!-- Audit & Review Timeline -->
-          <div style="margin-bottom: 18px;">
-            <h4 style="font-size: 0.8125rem; text-transform: uppercase; color: var(--color-text-secondary, #4A5D48); font-weight: 700; margin: 0 0 8px 0;">Official Review & Audit History</h4>
-            <div id="modalAuditTimeline" style="display: flex; flex-direction: column; gap: 8px;"></div>
-          </div>
-
-          <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--color-glass-border); padding-top: 14px;">
-            <a href="map.html" target="_blank" class="lw-btn lw-btn--sm lw-btn--outline" id="modalMapBtn">View on Risk Map &rarr;</a>
-            <button type="button" class="btn-dashboard-primary" id="modalCloseBtn" style="padding: 6px 16px;">Close</button>
+          <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #D9C9B2; padding-top: 14px;">
+            <a href="map.html" target="_blank" class="lw-btn lw-btn--sm lw-btn--outline" id="modalReportMapLink">View on Risk Map &rarr;</a>
+            <button type="button" class="btn-dashboard-primary" id="btnModalClose">Close</button>
           </div>
         </div>
       </div>
@@ -443,33 +353,34 @@
     </main>
   </div>
 
-  <!-- Core JavaScript Services -->
+  <!-- Scripts -->
   <script src="js/core/config.js"></script>
   <script src="js/core/content.js"></script>
   <script src="js/core/format.js"></script>
   <script src="js/core/store.js"></script>
-  <script src="js/core/connectivity.js"></script>
   <script src="js/core/api.js"></script>
   <script src="js/core/ui.js"></script>
   <script src="js/core/guard.js"></script>
-  <script src="js/core/shell.js"></script>
   <script src="js/core/auth.js"></script>
-
-  <!-- Incidents & Notification Services -->
-  <script src="js/services/regions-service.js"></script>
+  <script src="js/services/reports-storage.js"></script>
   <script src="js/services/incidents-service.js"></script>
-  <script src="js/services/notifications-store.js"></script>
   <script src="js/components/bell.js"></script>
-  <script src="js/components/field-officer-nav.js"></script>
 
   <script>
     document.addEventListener("DOMContentLoaded", async () => {
       // 1. User Header
-      const user = window.LW.authService?.getCurrentUser() || window.LW.auth?.getUser();
+      const user = window.LW.authService?.getCurrentUser() || (function() {
+        try {
+          const raw = sessionStorage.getItem("sg_user") || localStorage.getItem("sg_user");
+          return raw ? JSON.parse(raw) : null;
+        } catch (e) { return null; }
+      })();
+
       if (user) {
-        document.getElementById("sidebarName").textContent = user.name || user.fullName || "NER Field Officer";
-        document.getElementById("sidebarRole").innerHTML = `${(user.role || 'OFFICER').toUpperCase()} &bull; NER Command`;
-        document.getElementById("sidebarAvatar").textContent = (user.name || user.fullName || "O").charAt(0).toUpperCase();
+        const name = user.fullName || user.name || "Citizen Observer";
+        document.getElementById("sidebarName").textContent = name;
+        document.getElementById("sidebarRole").innerHTML = `CITIZEN &bull; Registered Monitor`;
+        document.getElementById("sidebarAvatar").textContent = name.charAt(0).toUpperCase();
       }
 
       const bellSlot = document.getElementById("bellSlot");
@@ -477,64 +388,91 @@
 
       document.getElementById("sidebarLogout")?.addEventListener("click", () => {
         window.LW.authService?.logout();
+        window.location.replace("login.html");
       });
 
-      // 2. Load Citizen Reports
+      document.getElementById("mobileToggle")?.addEventListener("click", () => {
+        document.getElementById("dashboardSidebar")?.classList.toggle("mobile-open");
+      });
+
+      // 2. Fetch Personal Reports from Backend /api/reports/mine
       let myReports = [];
       let activeFilter = "all";
+      let activeSearch = "";
 
       async function loadReports() {
         try {
           myReports = await window.LW.incidentsService.getMyIncidents();
         } catch (e) {
-          console.error("Failed to load citizen incidents:", e);
+          console.error("Failed to load personal citizen incidents:", e);
           myReports = [];
         }
-        updateBadgeCounts();
-        renderReports();
+        updateCounts();
+        render();
       }
 
-      function updateBadgeCounts() {
+      function updateCounts() {
         document.getElementById("countAll").textContent = myReports.length;
-        document.getElementById("countPending").textContent = myReports.filter(r => (r.status || "").toLowerCase() === "pending verification").length;
-        document.getElementById("countReview").textContent = myReports.filter(r => (r.status || "").toLowerCase() === "under review").length;
-        document.getElementById("countVerified").textContent = myReports.filter(r => (r.status || "").toLowerCase() === "verified").length;
-        document.getElementById("countInfo").textContent = myReports.filter(r => (r.status || "").toLowerCase() === "additional info requested").length;
-        document.getElementById("countResolved").textContent = myReports.filter(r => (r.status || "").toLowerCase() === "resolved").length;
-        document.getElementById("countRejected").textContent = myReports.filter(r => (r.status || "").toLowerCase() === "rejected").length;
+        document.getElementById("countPending").textContent = myReports.filter(r => (r.status || "").toUpperCase() === "PENDING").length;
+        document.getElementById("countReview").textContent = myReports.filter(r => (r.status || "").toUpperCase() === "UNDER_REVIEW").length;
+        document.getElementById("countVerified").textContent = myReports.filter(r => (r.status || "").toUpperCase() === "VERIFIED").length;
+        document.getElementById("countNeedsInfo").textContent = myReports.filter(r => (r.status || "").toUpperCase() === "REJECTED").length;
       }
 
       function getStatusBadge(status) {
-        const s = (status || "Pending Verification").toLowerCase();
-        let cls = "status-pending";
-        if (s === "verified") cls = "status-verified";
-        else if (s === "under review") cls = "status-review";
-        else if (s === "resolved") cls = "status-resolved";
-        else if (s === "rejected") cls = "status-rejected";
-        else if (s === "additional info requested") cls = "status-info";
-        return `<span class="status-badge ${cls}">${status}</span>`;
+        const s = (status || "PENDING").toUpperCase();
+        if (s === "VERIFIED") {
+          return `<span class="citizen-alert-badge info" style="background: #6B7F5B;">VERIFIED</span>`;
+        } else if (s === "UNDER_REVIEW") {
+          return `<span class="citizen-alert-badge moderate" style="background: #C58A2B;">UNDER REVIEW</span>`;
+        } else if (s === "REJECTED") {
+          return `<span class="citizen-alert-badge critical" style="background: #C96F4F;">NEEDS INFO</span>`;
+        }
+        return `<span class="citizen-alert-badge" style="background: #D9C9B2; color: #2E3A2F;">SUBMITTED</span>`;
       }
 
-      function renderReports() {
-        const container = document.getElementById("reportsListWrap");
+      function render() {
+        const container = document.getElementById("reportsListContainer");
         let filtered = myReports;
-        if (activeFilter !== "all") {
-          filtered = myReports.filter(r => (r.status || "").toLowerCase() === activeFilter);
+
+        if (activeFilter === "pending") {
+          filtered = myReports.filter(r => (r.status || "").toUpperCase() === "PENDING");
+        } else if (activeFilter === "under_review") {
+          filtered = myReports.filter(r => (r.status || "").toUpperCase() === "UNDER_REVIEW");
+        } else if (activeFilter === "verified") {
+          filtered = myReports.filter(r => (r.status || "").toUpperCase() === "VERIFIED");
+        } else if (activeFilter === "needs_info") {
+          filtered = myReports.filter(r => (r.status || "").toUpperCase() === "REJECTED");
+        }
+
+        if (activeSearch && activeSearch.trim()) {
+          const q = activeSearch.toLowerCase().trim();
+          filtered = filtered.filter(r => {
+            const idStr = String(r.id || '').toLowerCase();
+            const cat = String(r.incidentType || r.incidentCategory || '').toLowerCase();
+            const desc = String(r.description || '').toLowerCase();
+            const loc = String(r.locationDescription || (r.location && (r.location.roadName || r.location.placeName)) || '').toLowerCase();
+            return idStr.includes(q) || cat.includes(q) || desc.includes(q) || loc.includes(q);
+          });
         }
 
         if (filtered.length === 0) {
           container.innerHTML = `
-            <div style="background: #FFFFFF; border: 1px dashed var(--lw-border, #D9C9B2); border-radius: var(--radius-card, 6px); padding: 50px 20px; text-align: center;">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--color-text-muted, #5E6F5C); margin-bottom: 12px;">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
+            <div style="background: #FFFFFF; border: 1px dashed #D9C9B2; border-radius: 6px; padding: 48px 20px; text-align: center;">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#5E6F5C" stroke-width="1.8" style="margin-bottom: 12px;">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
               </svg>
-              <h3 style="color: var(--color-text-primary, #2E3A2F); margin: 0 0 8px 0; font-size: 1.1rem; font-weight: 800;">No reports found in this view</h3>
-              <p style="color: var(--color-text-secondary, #4A5D48); margin: 0 0 18px 0; font-size: 0.8125rem;">
-                ${activeFilter === 'all' ? 'You have not submitted any road blockage or landslide reports yet.' : 'No reports matching the selected verification filter.'}
+              <h3 style="color: #2E3A2F; margin: 0 0 8px 0; font-size: 1.05rem; font-weight: 800;">
+                ${activeSearch ? 'No matching reports found' : 'No reports in this category'}
+              </h3>
+              <p style="color: #4A5D48; margin: 0 0 16px 0; font-size: 0.8125rem;">
+                ${activeSearch
+                  ? `No incidents matching "${activeSearch}" were found in this view.`
+                  : 'You have not submitted any reports matching this status filter.'}
               </p>
               <a href="report-incident.html" class="btn-dashboard-primary" style="text-decoration: none; display: inline-block;">
-                + Report an Observation
+                + Report an Incident
               </a>
             </div>
           `;
@@ -542,66 +480,48 @@
         }
 
         container.innerHTML = `
-          <div class="reports-list-grid">
+          <div class="reports-cards-grid">
             ${filtered.map(report => {
-              const loc = report.location || {};
-              const pass = report.verifiedPassability || report.roadPassability || "unknown";
-              let passColor = "#A3B3A0";
-              if (pass === "open") passColor = "#8FD694";
-              if (pass === "partially blocked") passColor = "#F1A46B";
-              if (pass === "completely blocked") passColor = "#F07878";
-
-              const photosCount = report.photos ? report.photos.length : 0;
-              const thumbs = (report.photos || []).slice(0, 3).map(p => `
-                <div class="thumb-box">
-                  <img src="${p.url}" alt="Evidence" onerror="this.style.display='none'" />
-                </div>
-              `).join("");
+              const ref = report.id ? `#${report.id}` : (report.localId || "INC");
+              const category = report.incidentType || report.incidentCategory || "Hazard Observation";
+              const loc = (report.location?.roadName || report.location?.placeName || report.locationDescription || "Regional Slope");
+              const timeStr = report.submittedAt || report.reportedTimestamp || report.observedAt || new Date().toISOString();
+              const statusBadge = getStatusBadge(report.status);
 
               return `
-                <div class="incident-item-card" data-id="${report.id}">
+                <div class="report-tracking-card" data-id="${report.id}">
                   <div>
-                    <div class="incident-card-top">
-                      <span class="incident-card-ref">${report.id}</span>
-                      ${getStatusBadge(report.status)}
+                    <div class="report-card-header">
+                      <span class="report-ref-badge">${ref}</span>
+                      ${statusBadge}
                     </div>
-                    <h3 class="incident-card-type">${report.incidentType}</h3>
-                    <p style="font-size: 0.8125rem; color: #CBD5E1; margin: 0 0 12px 0; line-height: 1.4; max-height: 48px; overflow: hidden; text-overflow: ellipsis;">
-                      ${report.description}
-                    </p>
+                    <h3 class="report-category-title">${category}</h3>
+                    <p class="report-desc-preview">${report.description || 'No description provided.'}</p>
                   </div>
 
                   <div>
-                    <div class="incident-meta-box" style="margin-bottom: 12px;">
-                      <div class="meta-row">
-                        <span>Road / Place:</span>
-                        <span class="meta-val" style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                          ${loc.roadName || loc.placeName || 'Regional Slope'}
-                        </span>
+                    <div class="report-meta-box">
+                      <div class="meta-item">
+                        <span>Location:</span>
+                        <strong style="max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${loc}</strong>
                       </div>
-                      <div class="meta-row">
-                        <span>Passability:</span>
-                        <span class="meta-val" style="color: ${passColor};">${pass.toUpperCase()}</span>
-                      </div>
-                      <div class="meta-row">
-                        <span>Observed:</span>
-                        <span class="meta-val">${new Date(report.observedAt).toLocaleString()}</span>
+                      <div class="meta-item">
+                        <span>Submitted:</span>
+                        <span>${new Date(timeStr).toLocaleString()}</span>
                       </div>
                     </div>
 
-                    ${thumbs ? `<div class="incident-thumbs-strip" style="margin-bottom: 12px;">${thumbs}</div>` : ''}
-
-                    ${report.reviewReason ? `
-                      <div style="background: var(--lw-bg, #F8F6EE); border-left: 3px solid var(--lw-cta, #C96F4F); padding: 8px 12px; font-size: 0.75rem; color: var(--lw-text, #46566A); border-radius: 4px; margin-bottom: 12px;">
-                        <strong>Admin Feedback:</strong> ${report.reviewReason}
+                    ${report.reviewNotes ? `
+                      <div class="report-admin-note" style="margin-top: 10px;">
+                        <strong>Authority Feedback:</strong> ${report.reviewNotes}
                       </div>
                     ` : ''}
 
-                    <div style="display: flex; gap: 8px;">
-                      <button type="button" class="btn-dashboard-primary btn-view-detail" data-id="${report.id}" style="flex: 1; padding: 7px; font-size: 0.75rem; text-align: center;">
-                        Inspect Details
+                    <div style="display: flex; gap: 8px; margin-top: 14px;">
+                      <button type="button" class="btn-dashboard-primary btn-inspect-lifecycle" data-id="${report.id}" style="flex: 1; padding: 8px; font-size: 0.75rem; text-align: center;">
+                        Inspect Status & Timeline
                       </button>
-                      <a href="map.html?incident=${encodeURIComponent(report.id)}" class="lw-btn lw-btn--sm lw-btn--outline" style="text-decoration: none; padding: 7px 12px; font-size: 0.75rem;">
+                      <a href="map.html?incident=${encodeURIComponent(report.id)}" class="lw-btn lw-btn--sm lw-btn--outline" style="text-decoration: none; padding: 8px 12px; font-size: 0.75rem;">
                         Map
                       </a>
                     </div>
@@ -612,72 +532,173 @@
           </div>
         `;
 
-        container.querySelectorAll(".btn-view-detail").forEach(btn => {
-          btn.addEventListener("click", () => {
-            const target = myReports.find(r => r.id === btn.dataset.id);
-            if (target) openDetailModal(target);
-          });
+        container.querySelectorAll(".btn-inspect-lifecycle").forEach(btn => {
+          btn.onclick = () => {
+            const target = myReports.find(r => String(r.id) === String(btn.dataset.id));
+            if (target) openModal(target);
+          };
         });
       }
 
-      // Filter Pill Listeners
-      document.querySelectorAll(".filter-pill").forEach(pill => {
-        pill.addEventListener("click", () => {
-          document.querySelectorAll(".filter-pill").forEach(p => p.classList.remove("active"));
+      // Filter pills
+      document.querySelectorAll("#statusFilterBar .filter-pill").forEach(pill => {
+        pill.onclick = () => {
+          document.querySelectorAll("#statusFilterBar .filter-pill").forEach(p => p.classList.remove("active"));
           pill.classList.add("active");
-          activeFilter = pill.dataset.status;
-          renderReports();
-        });
+          activeFilter = pill.dataset.filter || "all";
+          render();
+        };
       });
 
-      // Detail Modal
-      const modal = document.getElementById("detailModal");
-      function openDetailModal(report) {
-        const loc = report.location || {};
-        document.getElementById("modalRef").textContent = report.id;
-        document.getElementById("modalCategory").textContent = report.incidentType;
-        document.getElementById("modalStatusBadgeWrap").innerHTML = getStatusBadge(report.status);
-        document.getElementById("modalLocation").textContent = `${loc.roadName ? loc.roadName + ' • ' : ''}${loc.placeName || 'Regional Slopes'}`;
-        document.getElementById("modalCoords").textContent = `Lat: ${loc.latitude?.toFixed(5)}°, Lng: ${loc.longitude?.toFixed(5)}° (±${loc.accuracy || 15}m)`;
-        document.getElementById("modalPassability").textContent = (report.verifiedPassability || report.roadPassability || 'unknown').toUpperCase();
-        document.getElementById("modalObserved").textContent = new Date(report.observedAt).toLocaleString();
-        document.getElementById("modalSubmitted").textContent = new Date(report.submittedAt).toLocaleString();
-        document.getElementById("modalDesc").textContent = report.description;
+      // Search input
+      const searchInput = document.getElementById("myReportsSearchInput");
+      const searchClear = document.getElementById("myReportsSearchClear");
+      let searchTimer = null;
+      if (searchInput) {
+        searchInput.addEventListener("input", (e) => {
+          clearTimeout(searchTimer);
+          searchTimer = setTimeout(() => {
+            activeSearch = e.target.value.trim();
+            if (searchClear) searchClear.style.display = activeSearch ? "inline-block" : "none";
+            render();
+          }, 150);
+        });
+      }
+      if (searchClear) {
+        searchClear.addEventListener("click", () => {
+          if (searchInput) searchInput.value = "";
+          activeSearch = "";
+          searchClear.style.display = "none";
+          render();
+        });
+      }
 
-        const gallery = document.getElementById("modalPhotosGallery");
-        if (report.photos && report.photos.length > 0) {
-          gallery.innerHTML = report.photos.map(p => `
-            <a href="${p.url}" target="_blank" style="display: block; border-radius: 4px; overflow: hidden; border: 1px solid rgba(215,245,160,0.2); height: 110px;">
-              <img src="${p.url}" alt="Evidence" style="width: 100%; height: 100%; object-fit: cover;" />
+      // Lifecycle Modal
+      const modal = document.getElementById("reportLifecycleModal");
+      function openModal(report) {
+        const ref = report.id ? `#${report.id}` : (report.localId || "INC");
+        const category = report.incidentType || report.incidentCategory || "Hazard Observation";
+        const loc = (report.location?.roadName || report.location?.placeName || report.locationDescription || "Regional Slope");
+        const lat = report.location?.latitude ?? report.latitude;
+        const lng = report.location?.longitude ?? report.longitude;
+        const coordsStr = (lat != null && lng != null) ? `Lat: ${Number(lat).toFixed(4)}°, Lng: ${Number(lng).toFixed(4)}°` : "Not provided";
+        const timeStr = report.submittedAt || report.reportedTimestamp || report.observedAt || new Date().toISOString();
+
+        document.getElementById("modalReportRef").textContent = ref;
+        document.getElementById("modalReportCategory").textContent = category;
+        document.getElementById("modalReportLocation").textContent = loc;
+        document.getElementById("modalReportCoords").textContent = coordsStr;
+        document.getElementById("modalReportTime").textContent = new Date(timeStr).toLocaleString();
+        document.getElementById("modalReportDescription").textContent = report.description || "No description provided.";
+
+        // Build 6-stage lifecycle
+        document.getElementById("modalLifecycleTimeline").innerHTML = buildLifecycleHtml(report.status, report.reviewNotes);
+
+        // Photo gallery
+        const photosContainer = document.getElementById("modalReportPhotos");
+        const photos = report.photos || [];
+        if (photos.length > 0) {
+          photosContainer.innerHTML = photos.map((p, idx) => `
+            <a href="${p.url || p.previewUrl}" target="_blank" title="View Photograph ${idx + 1}" style="display: block; width: 88px; height: 72px; border-radius: 4px; overflow: hidden; border: 1px solid #D9C9B2;">
+              <img src="${p.url || p.previewUrl}" alt="Photo ${idx + 1}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'">
             </a>
           `).join("");
         } else {
-          gallery.innerHTML = `<span style="font-size: 0.75rem; color: var(--color-text-muted);">No photograph submitted with this report.</span>`;
+          photosContainer.innerHTML = `<span style="font-size: 0.8125rem; color: #5E6F5C;">No photographs attached to this report.</span>`;
         }
 
-        const timeline = document.getElementById("modalAuditTimeline");
-        const audit = report.auditTrail || [];
-        timeline.innerHTML = audit.map(a => `
-          <div style="background: var(--lw-bg, #F8F6EE); border: 1px solid var(--lw-border, #D9C9B2); border-left: 3px solid var(--lw-cta, #C96F4F); padding: 10px 12px; border-radius: 4px; font-size: 0.75rem;">
-            <div style="display: flex; justify-content: space-between; color: var(--color-text-secondary, #4A5D48); margin-bottom: 3px;">
-              <strong style="color: var(--color-text-primary, #2E3A2F);">${a.actor || 'System'}</strong> &bull; ${a.action}
-              <span style="color: var(--color-text-muted, #5E6F5C); font-size: 0.71875rem;">${new Date(a.timestamp).toLocaleString()}</span>
-            </div>
-            <div style="color: var(--color-text-primary, #2E3A2F); font-weight: 500;">${a.notes || a.reason || 'Status recorded.'}</div>
-          </div>
-        `).join("");
-
-        document.getElementById("modalMapBtn").href = `map.html?incident=${encodeURIComponent(report.id)}`;
+        document.getElementById("modalReportMapLink").href = `map.html?incident=${encodeURIComponent(report.id || '')}`;
         modal.style.display = "flex";
+      }
+
+      function buildLifecycleHtml(status, reviewNotes) {
+        const norm = (status || "PENDING").toUpperCase().replace(/\s+/g, "_");
+
+        const step1Cls = "completed"; // Submitted
+
+        let step2Cls = "";
+        if (norm === "UNDER_REVIEW") step2Cls = "active";
+        else if (norm === "VERIFIED" || norm === "REJECTED" || norm === "ASSIGNED" || norm === "IN_PROGRESS" || norm === "COMPLETED") step2Cls = "completed";
+
+        let step3Cls = "";
+        let step3Label = "Verified";
+        if (norm === "REJECTED") {
+          step3Cls = "needs-info";
+          step3Label = "Needs Information";
+        } else if (norm === "VERIFIED") {
+          step3Cls = "active";
+        } else if (norm === "ASSIGNED" || norm === "IN_PROGRESS" || norm === "COMPLETED") {
+          step3Cls = "completed";
+        }
+
+        let step4Cls = "";
+        if (norm === "ASSIGNED") step4Cls = "active";
+        else if (norm === "IN_PROGRESS" || norm === "COMPLETED") step4Cls = "completed";
+
+        let step5Cls = "";
+        if (norm === "IN_PROGRESS") step5Cls = "active";
+        else if (norm === "COMPLETED") step5Cls = "completed";
+
+        let step6Cls = "";
+        if (norm === "COMPLETED") step6Cls = "completed";
+
+        return `
+          <div class="lifecycle-timeline" aria-label="Incident Lifecycle Progress">
+            <div class="lifecycle-step ${step1Cls}">
+              <div class="lifecycle-circle">${step1Cls === 'completed' ? '✓' : '1'}</div>
+              <div class="lifecycle-label">Submitted</div>
+            </div>
+            <div class="lifecycle-step ${step2Cls}">
+              <div class="lifecycle-circle">${step2Cls === 'completed' ? '✓' : '2'}</div>
+              <div class="lifecycle-label">Under Review</div>
+            </div>
+            <div class="lifecycle-step ${step3Cls}">
+              <div class="lifecycle-circle">${step3Cls === 'completed' ? '✓' : (step3Cls === 'needs-info' ? '!' : '3')}</div>
+              <div class="lifecycle-label">${step3Label}</div>
+            </div>
+            <div class="lifecycle-step ${step4Cls}">
+              <div class="lifecycle-circle">${step4Cls === 'completed' ? '✓' : '4'}</div>
+              <div class="lifecycle-label">Assigned</div>
+            </div>
+            <div class="lifecycle-step ${step5Cls}">
+              <div class="lifecycle-circle">${step5Cls === 'completed' ? '✓' : '5'}</div>
+              <div class="lifecycle-label">In Progress</div>
+            </div>
+            <div class="lifecycle-step ${step6Cls}">
+              <div class="lifecycle-circle">${step6Cls === 'completed' ? '✓' : '6'}</div>
+              <div class="lifecycle-label">Completed</div>
+            </div>
+          </div>
+          ${norm === 'REJECTED' && reviewNotes ? `
+            <div style="background: #FFF8F6; border: 1px solid #D9C9B2; border-left: 4px solid #C58A2B; border-radius: 4px; padding: 10px 14px; margin-top: 10px; font-size: 0.8125rem;">
+              <strong style="color: #C58A2B; display: block; margin-bottom: 2px;">Administrator Feedback (Needs Information):</strong>
+              <p style="margin: 0; color: #2E3A2F;">${reviewNotes}</p>
+            </div>
+          ` : ''}
+          ${norm === 'VERIFIED' && reviewNotes ? `
+            <div style="background: #F8F6EE; border: 1px solid #D9C9B2; border-left: 4px solid #6B7F5B; border-radius: 4px; padding: 10px 14px; margin-top: 10px; font-size: 0.8125rem;">
+              <strong style="color: #6B7F5B; display: block; margin-bottom: 2px;">Verification Note:</strong>
+              <p style="margin: 0; color: #2E3A2F;">${reviewNotes}</p>
+            </div>
+          ` : ''}
+        `;
       }
 
       function closeModal() {
         modal.style.display = "none";
       }
-      document.getElementById("btnCloseDetailModal").onclick = closeModal;
-      document.getElementById("modalCloseBtn").onclick = closeModal;
+
+      document.getElementById("btnCloseLifecycleModal")?.addEventListener("click", closeModal);
+      document.getElementById("btnModalClose")?.addEventListener("click", closeModal);
 
       await loadReports();
+
+      // Cross-tab live synchronization via BroadcastChannel
+      if (window.LW.reportsStorage?.onSync) {
+        window.LW.reportsStorage.onSync(() => {
+          loadReports();
+        });
+      }
     });
   </script>
 </body>

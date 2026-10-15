@@ -36,10 +36,10 @@ public class CorsConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
-                .allowedOrigins(allowedOrigins)
+                .allowedOriginPatterns("http://localhost:*", "http://127.0.0.1:*", "https://localhost:*", "https://127.0.0.1:*")
                 .allowedMethods("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS")
-                .allowedHeaders("Authorization", "Content-Type", "Accept", "X-Requested-With", "Origin")
-                .exposedHeaders("Location")
+                .allowedHeaders("*")
+                .exposedHeaders("Location", "Authorization")
                 .allowCredentials(true)
                 .maxAge(3600);
     }
@@ -47,10 +47,15 @@ public class CorsConfig implements WebMvcConfigurer {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(allowedOrigins));
+        List<String> originPatterns = new java.util.ArrayList<>(Arrays.asList(allowedOrigins));
+        if (!originPatterns.contains("http://localhost:*")) originPatterns.add("http://localhost:*");
+        if (!originPatterns.contains("http://127.0.0.1:*")) originPatterns.add("http://127.0.0.1:*");
+        if (!originPatterns.contains("https://localhost:*")) originPatterns.add("https://localhost:*");
+        if (!originPatterns.contains("https://127.0.0.1:*")) originPatterns.add("https://127.0.0.1:*");
+        config.setAllowedOriginPatterns(originPatterns);
         config.setAllowedMethods(List.of("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "X-Requested-With", "Origin"));
-        config.setExposedHeaders(List.of("Location"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setExposedHeaders(List.of("Location", "Authorization"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 

@@ -25,6 +25,8 @@ public class ReportResponse {
     private LocalDateTime reportedTimestamp;
     private LocalDateTime observationTimestamp;
     private String environmentalObservations;
+    private String reviewNotes;
+    private LocalDateTime statusUpdatedAt;
     private List<ReportPhotoResponse> photos = new ArrayList<>();
 
     public ReportResponse() {
@@ -141,5 +143,21 @@ public class ReportResponse {
 
     public void setPhotos(List<ReportPhotoResponse> photos) {
         this.photos = photos != null ? photos : new ArrayList<>();
+    }
+
+    public String getReviewNotes() {
+        return reviewNotes;
+    }
+
+    public void setReviewNotes(String reviewNotes) {
+        this.reviewNotes = reviewNotes;
+    }
+
+    public LocalDateTime getStatusUpdatedAt() {
+        return statusUpdatedAt;
+    }
+
+    public void setStatusUpdatedAt(LocalDateTime statusUpdatedAt) {
+        this.statusUpdatedAt = statusUpdatedAt;
     }
 }

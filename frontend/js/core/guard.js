@@ -30,7 +30,13 @@ window.LW.guard = (function() {
   }
 
   function getDashboardUrl() {
-    return isInAdmin() ? "../dashboard.html" : "dashboard.html";
+    const user = getCurrentUser();
+    const role = (user?.role || "").toUpperCase();
+    const isRescueRole = role === "OFFICER" || role === "RESCUE_FORCE";
+    if (isInAdmin()) {
+      return isRescueRole ? "../rescue-dashboard.html" : "../dashboard.html";
+    }
+    return isRescueRole ? "rescue-dashboard.html" : "dashboard.html";
   }
 
   // Setup bfcache/pageshow listener to recheck authentication when user navigates back
@@ -63,7 +69,13 @@ window.LW.guard = (function() {
       const userRole = (user.role || "USER").toUpperCase();
       const rolesUpper = allowedRoles.map(r => r.toUpperCase());
 
-      if (!rolesUpper.includes(userRole)) {
+      // Bidirectional compatibility: RESCUE_FORCE and legacy OFFICER
+      const normalizedUserRole = userRole === "OFFICER" ? "RESCUE_FORCE" : userRole;
+      const normalizedRoles = rolesUpper.flatMap(r => 
+        r === "OFFICER" ? ["OFFICER", "RESCUE_FORCE"] : (r === "RESCUE_FORCE" ? ["RESCUE_FORCE", "OFFICER"] : [r])
+      );
+
+      if (!normalizedRoles.includes(userRole) && !normalizedRoles.includes(normalizedUserRole)) {
         if (window.LW.ui?.toast) {
           window.LW.ui.toast("Access denied: Administrative privileges required.", "error");
         }

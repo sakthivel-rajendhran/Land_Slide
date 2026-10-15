@@ -367,11 +367,11 @@
 
       <!-- Quick Demo Credentials for Evaluation -->
       <div class="demo-credentials-box">
-        <strong>Quick Testing Credentials:</strong><br/>
-        <span>Click to auto-populate authorized role:</span><br/>
-        <button type="button" class="demo-quick-btn" id="demoCitizen">Citizen</button>
-        <button type="button" class="demo-quick-btn" id="demoOfficer">Field Officer</button>
-        <button type="button" class="demo-quick-btn" id="demoAdmin">SDMA Admin</button>
+        <strong>Instant Role Access:</strong><br/>
+        <span>Click for direct access (no credentials needed):</span><br/>
+        <button type="button" class="demo-quick-btn" id="demoCitizen" title="Enter immediately as Citizen">Citizen</button>
+        <button type="button" class="demo-quick-btn" id="demoOfficer" title="Enter immediately as Rescue Force">Rescue Force</button>
+        <button type="button" class="demo-quick-btn" id="demoAdmin" title="Enter immediately as SDMA Admin">SDMA Admin</button>
       </div>
 
       <div class="login-footer-notice" id="footerNotice">
@@ -393,7 +393,7 @@
   <script src="js/services/regions-service.js"></script>
 
   <script>
-    // Validate and resolve safe redirect destination (defaults to dashboard.html or admin/dashboard.html)
+    // Validate and resolve safe redirect destination (defaults to dashboard.html, rescue-dashboard.html, or admin/dashboard.html)
     function getSafeDestination(user) {
       const urlParams = new URLSearchParams(window.location.search);
       const next = urlParams.get("next") || urlParams.get("returnUrl");
@@ -405,7 +405,8 @@
         } catch(e) {}
       }
       const role = (u?.role || "").toUpperCase();
-      const defaultDest = role === "ADMIN" ? "admin/dashboard.html" : "dashboard.html";
+      const isRescue = role === "OFFICER" || role === "RESCUE_FORCE";
+      const defaultDest = role === "ADMIN" ? "admin/dashboard.html" : (isRescue ? "rescue-dashboard.html" : "dashboard.html");
 
       if (!next) return defaultDest;
 
@@ -469,27 +470,145 @@
         });
       }
 
-      // Demo quick buttons
+      // Demo quick buttons — Instant Direct Role Navigation (Bypasses credential requirements)
+      async function enterAsRole(roleType) {
+        if (errorBanner) errorBanner.style.display = "none";
+        if (submitBtn) submitBtn.disabled = true;
+        if (submitBtnText) submitBtnText.textContent = `Entering as ${roleType}...`;
+
+        const roleProfiles = {
+          CITIZEN: {
+            id: 2,
+            userId: 2,
+            name: "Test Citizen",
+            fullName: "Test Citizen",
+            email: "citizen.test@slopeguard.com",
+            role: "CITIZEN",
+            roles: ["citizen", "user"],
+            district: "East Khasi Hills, Meghalaya",
+            jurisdiction: "NER Central Command",
+            defaultDest: "dashboard.html"
+          },
+          RESCUE_FORCE: {
+            id: 3,
+            userId: 3,
+            name: "Rescue Force Unit (NER)",
+            fullName: "Rescue Force Unit (NER)",
+            email: "officer@slopeguard.ner.gov.in",
+            role: "RESCUE_FORCE",
+            roles: ["rescue_force", "officer", "user"],
+            district: "NER Emergency Taskforce",
+            jurisdiction: "North Eastern Region",
+            defaultDest: "rescue-dashboard.html"
+          },
+          OFFICER: {
+            id: 3,
+            userId: 3,
+            name: "Rescue Force Unit (NER)",
+            fullName: "Rescue Force Unit (NER)",
+            email: "officer@slopeguard.ner.gov.in",
+            role: "RESCUE_FORCE",
+            roles: ["rescue_force", "officer", "user"],
+            district: "NER Emergency Taskforce",
+            jurisdiction: "North Eastern Region",
+            defaultDest: "rescue-dashboard.html"
+          },
+          ADMIN: {
+            id: 1,
+            userId: 1,
+            name: "System Administrator",
+            fullName: "System Administrator",
+            email: "admin@slopeguard.org",
+            role: "ADMIN",
+            roles: ["admin", "officer", "user"],
+            district: "SDMA Central Operations",
+            jurisdiction: "State Disaster Management Authority",
+            defaultDest: "admin/dashboard.html"
+          }
+        };
+
+        const profile = { ...(roleProfiles[roleType] || roleProfiles.CITIZEN) };
+
+        // Attempt to fetch real signed JWT token from backend in background
+        try {
+          const authCreds = {
+            CITIZEN: { email: "citizen.test@slopeguard.com", password: "Citizen@12345" },
+            RESCUE_FORCE: { email: "officer@slopeguard.ner.gov.in", password: "OfficerPass123!" },
+            OFFICER: { email: "officer@slopeguard.ner.gov.in", password: "OfficerPass123!" },
+            ADMIN: { email: "admin@slopeguard.org", password: "AdminPass123!Safe" }
+          };
+          const cred = authCreds[roleType];
+          if (cred && window.LW?.api) {
+            const res = await window.LW.api.post("/api/auth/login", {
+              email: cred.email,
+              username: cred.email,
+              password: cred.password,
+              remember: true
+            }).catch(() => null);
+            if (res && (res.token || res.data?.token)) {
+              profile.token = res.token || res.data.token;
+              if (res.fullName) profile.fullName = res.fullName;
+              if (res.role) profile.role = res.role;
+            }
+          }
+        } catch (e) {
+          // Never block or show credential errors on quick role buttons
+        }
+
+        if (!profile.token) {
+          profile.token = "demo_jwt_token_" + roleType.toLowerCase() + "_" + Date.now();
+        }
+
+        // Establish session in both storages
+        const serialized = JSON.stringify(profile);
+        localStorage.setItem("sg_user", serialized);
+        sessionStorage.setItem("sg_user", serialized);
+        localStorage.setItem("sg_token", profile.token);
+        sessionStorage.setItem("sg_token", profile.token);
+
+        if (window.LW?.auth) {
+          try {
+            window.LW.auth.setStoredUser?.(profile, true);
+          } catch (e) {}
+        }
+
+        // Determine destination (respecting next/returnUrl)
+        const urlParams = new URLSearchParams(window.location.search);
+        const nextParam = urlParams.get("next") || urlParams.get("returnUrl");
+        let dest = profile.defaultDest;
+        if (nextParam) {
+          try {
+            const dec = decodeURIComponent(nextParam).trim();
+            if (!dec.startsWith("//") && !/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(dec) && !dec.includes("login.html") && !dec.includes("signup.html")) {
+              if (dec.includes("admin/") && roleType !== "ADMIN") {
+                dest = (roleType === "OFFICER" || roleType === "RESCUE_FORCE") ? "rescue-dashboard.html" : "dashboard.html";
+              } else {
+                dest = dec;
+              }
+            }
+          } catch (e) {}
+        }
+
+        if (window.LW?.ui?.toast) {
+          window.LW.ui.toast(`Entering directly as ${profile.name}...`, "success");
+        }
+
+        setTimeout(() => {
+          window.location.replace(dest);
+        }, 120);
+      }
+
       const demoCitizen = document.getElementById("demoCitizen");
       const demoOfficer = document.getElementById("demoOfficer");
       const demoAdmin = document.getElementById("demoAdmin");
       if (demoCitizen) {
-        demoCitizen.onclick = () => {
-          usernameInput.value = "citizen.test@slopeguard.com";
-          passwordInput.value = "Citizen@12345";
-        };
+        demoCitizen.onclick = () => enterAsRole("CITIZEN");
       }
       if (demoOfficer) {
-        demoOfficer.onclick = () => {
-          usernameInput.value = "officer@slopeguard.ner.gov.in";
-          passwordInput.value = "officer123";
-        };
+        demoOfficer.onclick = () => enterAsRole("RESCUE_FORCE");
       }
       if (demoAdmin) {
-        demoAdmin.onclick = () => {
-          usernameInput.value = "admin@slopeguard.ner.gov.in";
-          passwordInput.value = "admin123";
-        };
+        demoAdmin.onclick = () => enterAsRole("ADMIN");
       }
 
       // Forgot Password behavior

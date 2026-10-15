@@ -7,10 +7,13 @@ window.LW = window.LW || {};
 
 window.LW.config = {
   appVersion: "1.0.0",
-  // If hosted directly on backend port 8080 use relative /api, otherwise target live backend on http://localhost:8080/api
-  apiBase: (typeof window !== "undefined" && window.location && window.location.port === "8080")
-    ? "/api"
-    : "http://localhost:8080/api",
+  // Target live backend on port 8080 dynamically matching current host
+  apiBase: (function() {
+    if (typeof window === "undefined" || !window.location) return "http://localhost:8080/api";
+    if (window.location.port === "8080") return "/api";
+    const host = window.location.hostname || "localhost";
+    return `http://${host}:8080/api`;
+  })(),
   useMock: false, // Live persistence against Spring Boot & MySQL
 
   tileProvider: {

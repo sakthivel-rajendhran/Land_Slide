@@ -12,6 +12,8 @@ public class RegisterResponse {
     private String email;
     private UserRole role;
     private String message;
+    private String token;
+    private String tokenType;
 
     public RegisterResponse() {
     }
@@ -22,6 +24,16 @@ public class RegisterResponse {
         this.email = email;
         this.role = role;
         this.message = message;
+    }
+
+    public RegisterResponse(Long id, String fullName, String email, UserRole role, String message, String token, String tokenType) {
+        this.id = id;
+        this.fullName = fullName;
+        this.email = email;
+        this.role = role;
+        this.message = message;
+        this.token = token;
+        this.tokenType = tokenType;
     }
 
     public Long getId() {
@@ -62,5 +74,21 @@ public class RegisterResponse {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
+    }
+
+    public String getTokenType() {
+        return tokenType;
+    }
+
+    public void setTokenType(String tokenType) {
+        this.tokenType = tokenType;
     }
 }

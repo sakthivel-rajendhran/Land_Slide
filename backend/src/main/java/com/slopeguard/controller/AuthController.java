@@ -50,13 +50,16 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request) {
         User user = userService.registerCitizen(request);
+        String token = jwtService.generateToken(user);
 
         RegisterResponse response = new RegisterResponse(
                 user.getId(),
                 user.getFullName(),
                 user.getEmail(),
                 user.getRole(),
-                "Citizen account registered successfully. You may now log in."
+                "Citizen account registered successfully. You may now log in.",
+                token,
+                "Bearer"
         );
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);

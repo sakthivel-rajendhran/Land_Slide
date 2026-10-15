@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="../css/components.css">
   <link rel="stylesheet" href="../css/shells.css">
   <link rel="stylesheet" href="../css/pages/dashboard.css">
+  <link rel="stylesheet" href="../css/leaflet.css">
 
   <!-- Immediate Authentication & Role Guard -->
   <script>
@@ -34,7 +35,7 @@
             return;
           }
           var role = (user.role || "").toUpperCase();
-          if (role !== "ADMIN" && role !== "OFFICER") {
+          if (role !== "ADMIN" && role !== "OFFICER" && role !== "RESCUE_FORCE") {
             window.location.replace("../dashboard.html");
           }
         } catch (e) {
@@ -47,6 +48,248 @@
       });
     })();
   </script>
+
+  <style>
+    /* Status Badges */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+    .status-pending { background: rgba(217, 201, 178, 0.3); color: #8C6A3C; border: 1px solid #D9C9B2; }
+    .status-under_review { background: rgba(107, 127, 91, 0.15); color: #4B633C; border: 1px solid rgba(107, 127, 91, 0.35); }
+    .status-assigned { background: rgba(59, 130, 246, 0.15); color: #2563EB; border: 1px solid rgba(59, 130, 246, 0.35); }
+    .status-responding { background: rgba(168, 85, 247, 0.15); color: #7E22CE; border: 1px solid rgba(168, 85, 247, 0.35); }
+    .status-verified { background: rgba(107, 127, 91, 0.2); color: #2E3A2F; border: 1px solid rgba(107, 127, 91, 0.4); }
+    .status-escalated { background: rgba(239, 68, 68, 0.18); color: #DC2626; border: 1px solid rgba(239, 68, 68, 0.4); animation: pulseSlow 2s infinite; }
+    .status-resolved { background: rgba(34, 197, 94, 0.15); color: #15803D; border: 1px solid rgba(34, 197, 94, 0.35); }
+    .status-rejected { background: rgba(201, 111, 79, 0.15); color: #C96F4F; border: 1px solid rgba(201, 111, 79, 0.3); }
+
+    @keyframes pulseSlow {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.75; }
+    }
+
+    .sev-critical { background: rgba(239, 68, 68, 0.15); color: #DC2626; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .sev-high { background: rgba(249, 115, 22, 0.15); color: #C2410C; border: 1px solid rgba(249, 115, 22, 0.3); }
+    .sev-moderate { background: rgba(234, 179, 8, 0.15); color: #854D0E; border: 1px solid rgba(234, 179, 8, 0.3); }
+    .sev-low { background: rgba(34, 197, 94, 0.15); color: #15803D; border: 1px solid rgba(34, 197, 94, 0.3); }
+
+    /* Filter Pills */
+    .filter-pills-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .filter-pill {
+      background: #FAF8F2;
+      border: 1px solid var(--lw-border, #D9C9B2);
+      color: var(--color-text-secondary, #6B7F5B);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+    .filter-pill:hover {
+      border-color: var(--lw-cta, #C96F4F);
+      color: var(--color-text-primary, #2E3A2F);
+    }
+    .filter-pill.active {
+      background: rgba(201, 111, 79, 0.12);
+      border-color: var(--lw-cta, #C96F4F);
+      color: var(--lw-cta, #C96F4F);
+    }
+
+    /* Modal Overlay & Structure */
+    .sg-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(46, 58, 47, 0.65);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .sg-modal-overlay.active {
+      display: flex;
+    }
+    .sg-modal-card {
+      background: #FFFFFF;
+      border: 1px solid var(--lw-border, #D9C9B2);
+      border-radius: var(--radius-card, 6px);
+      width: 100%;
+      max-width: 720px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 16px 40px rgba(46, 58, 47, 0.2);
+      display: flex;
+      flex-direction: column;
+    }
+    .sg-modal-header {
+      padding: 16px 22px;
+      border-bottom: 1px solid var(--lw-border, #D9C9B2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      background: #FFFFFF;
+      z-index: 10;
+    }
+    .sg-modal-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--color-text-primary, #2E3A2F);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+    }
+    .sg-modal-close-btn {
+      background: transparent;
+      border: none;
+      color: var(--color-text-muted, #72826F);
+      font-size: 1.35rem;
+      cursor: pointer;
+      padding: 4px;
+      line-height: 1;
+    }
+    .sg-modal-close-btn:hover { color: var(--color-text-primary, #2E3A2F); }
+    .sg-modal-body {
+      padding: 18px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .sg-modal-footer {
+      padding: 14px 22px;
+      border-top: 1px solid var(--lw-border, #D9C9B2);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      background: #FAF8F2;
+    }
+
+    .info-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      background: #FAF8F2;
+      border: 1px solid var(--lw-border, #D9C9B2);
+      border-radius: 4px;
+      padding: 10px 12px;
+    }
+    .info-item-label {
+      font-size: 0.6875rem;
+      color: var(--color-text-muted, #72826F);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 2px;
+    }
+    .info-item-value {
+      font-size: 0.8125rem;
+      color: var(--color-text-primary, #2E3A2F);
+      font-weight: 600;
+    }
+    .audit-history-box {
+      background: #FAF8F2;
+      border: 1px solid var(--lw-border, #D9C9B2);
+      border-radius: 4px;
+      padding: 10px 12px;
+      max-height: 140px;
+      overflow-y: auto;
+    }
+    .audit-entry {
+      font-size: 0.75rem;
+      padding: 5px 0;
+      border-bottom: 1px dashed var(--lw-border, #D9C9B2);
+    }
+    .audit-entry:last-child { border-bottom: none; }
+    .audit-entry-top {
+      display: flex;
+      justify-content: space-between;
+      color: var(--color-text-muted, #72826F);
+      font-size: 0.6875rem;
+      margin-bottom: 2px;
+    }
+
+    /* Table Action Buttons */
+    .btn-action-triage {
+      background: rgba(201, 111, 79, 0.12);
+      border: 1px solid rgba(201, 111, 79, 0.35);
+      color: var(--lw-cta, #C96F4F);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.725rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+    .btn-action-triage:hover {
+      background: var(--lw-cta, #C96F4F);
+      color: #FFFFFF;
+    }
+
+    .btn-action-assign {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #2563EB;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.725rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+    .btn-action-assign:hover {
+      background: #2563EB;
+      color: #FFFFFF;
+    }
+
+    .btn-action-escalate {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      color: #DC2626;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.725rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+    .btn-action-escalate:hover {
+      background: #DC2626;
+      color: #FFFFFF;
+    }
+
+    @media (max-width: 768px) {
+      .info-grid-2 { grid-template-columns: 1fr; }
+      .sg-modal-card { max-width: 95vw; }
+    }
+  </style>
 </head>
 <body class="dashboard-root" data-shell="admin">
 
@@ -169,46 +412,108 @@
       <section class="dashboard-metrics-grid">
         <div class="metric-card">
           <div class="metric-card-top">
-            <span class="metric-card-label">Monitored Sectors</span>
-            <div class="metric-card-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path></svg></div>
+            <span class="metric-card-label">Total Citizen Reports</span>
+            <div class="metric-card-icon" style="background: rgba(107, 127, 91, 0.15); color: var(--color-primary);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path></svg></div>
           </div>
           <div>
-            <div class="metric-card-value">7 Sectors</div>
-            <div class="metric-card-footnote">Across 7 NER States</div>
+            <div class="metric-card-value" id="statAdminTotalReports">0</div>
+            <div class="metric-card-footnote" id="statAdminTotalFootnote">Recorded in device storage</div>
           </div>
         </div>
 
         <div class="metric-card">
           <div class="metric-card-top">
-            <span class="metric-card-label">Pending Reviews</span>
+            <span class="metric-card-label">Pending Verification</span>
             <div class="metric-card-icon" style="background: rgba(240, 120, 120, 0.15); color: var(--color-risk-severe);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg></div>
           </div>
           <div>
-            <div class="metric-card-value" style="color: var(--color-risk-severe);">2 Breaches</div>
-            <div class="metric-card-footnote">Require officer sign-off</div>
+            <div class="metric-card-value" id="statAdminPendingReports" style="color: var(--color-risk-severe);">0 Pending</div>
+            <div class="metric-card-footnote">Awaiting geotechnical gate</div>
           </div>
         </div>
 
         <div class="metric-card">
           <div class="metric-card-top">
-            <span class="metric-card-label">Active Bulletins</span>
-            <div class="metric-card-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path></svg></div>
+            <span class="metric-card-label">Active Field Tasks</span>
+            <div class="metric-card-icon" style="background: rgba(59, 130, 246, 0.15); color: #2563EB;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg></div>
           </div>
           <div>
-            <div class="metric-card-value">3 Published</div>
-            <div class="metric-card-footnote">Dispatched via SMS & Push</div>
+            <div class="metric-card-value" id="statAdminAssignedReports" style="color: #2563EB;">0 Assigned</div>
+            <div class="metric-card-footnote">Field inspections active</div>
           </div>
         </div>
 
         <div class="metric-card">
           <div class="metric-card-top">
-            <span class="metric-card-label">Telemetry Feed</span>
-            <div class="metric-card-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg></div>
+            <span class="metric-card-label">Critical / Escalated</span>
+            <div class="metric-card-icon" style="background: rgba(239, 68, 68, 0.18); color: #DC2626;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></div>
           </div>
           <div>
-            <div class="metric-card-value">100% Online</div>
-            <div class="metric-card-footnote">IMD & InSAR Ingesting</div>
+            <div class="metric-card-value" id="statAdminEscalatedReports" style="color: #DC2626;">0 Active</div>
+            <div class="metric-card-footnote">Emergency response teams</div>
           </div>
+        </div>
+      </section>
+
+      <!-- CITIZEN INCIDENT REPORTS MANAGEMENT PANEL (Task 1, 2, 3, 5) -->
+      <section class="dashboard-panel-card" style="margin-bottom: 24px;" id="adminReportsManagementSection">
+        <div class="panel-header" style="flex-wrap: wrap; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <h2 class="panel-title" style="margin: 0;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+              Citizen Incident Reports Management
+            </h2>
+            <span class="sidebar-brand-badge" id="adminReportTableBadge">0 REPORTS</span>
+          </div>
+
+          <!-- Real-Time Search Box (Task 2) -->
+          <div style="position: relative; width: 100%; max-width: 380px;">
+            <svg style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--color-text-muted); pointer-events: none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="adminReportSearchInput" placeholder="Search by ID, category, location, officer, description..." style="width: 100%; padding: 7px 32px 7px 34px; border-radius: 4px; border: 1px solid var(--lw-border, #D9C9B2); background: #FFFFFF; font-family: inherit; font-size: 0.8125rem; color: var(--color-text-primary);" />
+            <button type="button" id="adminReportSearchClear" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 1.1rem; color: var(--color-text-muted); cursor: pointer; padding: 2px 6px; line-height: 1;" title="Clear search">&times;</button>
+          </div>
+        </div>
+
+        <!-- Filter Pills Bar -->
+        <div style="padding: 12px 18px; border-bottom: 1px solid var(--lw-border, #D9C9B2); background: #FAF8F2;">
+          <div class="filter-pills-bar" id="adminReportFilterBar">
+            <button type="button" class="filter-pill active" data-status="all">All Reports (<span id="pillCountAll">0</span>)</button>
+            <button type="button" class="filter-pill" data-status="pending verification">Pending (<span id="pillCountPending">0</span>)</button>
+            <button type="button" class="filter-pill" data-status="under review">Under Review (<span id="pillCountUnderReview">0</span>)</button>
+            <button type="button" class="filter-pill" data-status="assigned">Assigned (<span id="pillCountAssigned">0</span>)</button>
+            <button type="button" class="filter-pill" data-status="responding">Responding (<span id="pillCountResponding">0</span>)</button>
+            <button type="button" class="filter-pill" data-status="verified">Verified (<span id="pillCountVerified">0</span>)</button>
+            <button type="button" class="filter-pill" data-status="escalated">Escalated (<span id="pillCountEscalated">0</span>)</button>
+            <button type="button" class="filter-pill" data-status="resolved">Resolved (<span id="pillCountResolved">0</span>)</button>
+          </div>
+        </div>
+
+        <!-- Reports Table -->
+        <div class="reports-table-wrap" style="overflow-x: auto;">
+          <table class="dashboard-table">
+            <thead>
+              <tr>
+                <th style="min-width: 150px;">Incident ID & Date</th>
+                <th style="min-width: 130px;">Reporter</th>
+                <th style="min-width: 200px;">Category & Description</th>
+                <th style="min-width: 120px;">Severity & Road</th>
+                <th style="min-width: 180px;">Location & Coordinates</th>
+                <th style="min-width: 90px;">Evidence</th>
+                <th style="min-width: 150px;">Status & Assignment</th>
+                <th style="min-width: 210px; text-align: right;">Emergency Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminIncidentReportsTbody">
+              <tr>
+                <td colspan="8" style="text-align: center; padding: 36px; color: var(--color-text-muted);">
+                  Loading citizen incident records from local storage...
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </section>
 
@@ -290,6 +595,307 @@
     </main>
   </div>
 
+  <!-- MODAL 1: REPORT REVIEW & TRIAGE (Task 3A) -->
+  <div class="sg-modal-overlay" id="adminTriageModal" role="dialog" aria-modal="true" aria-labelledby="triageModalTitle">
+    <div class="sg-modal-card">
+      <div class="sg-modal-header">
+        <h3 class="sg-modal-title" id="triageModalTitle">
+          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          Incident Triage & Status Review
+        </h3>
+        <button type="button" class="sg-modal-close-btn" id="btnCloseTriageModal">&times;</button>
+      </div>
+
+      <div class="sg-modal-body">
+        <div class="info-grid-2">
+          <div>
+            <div class="info-item-label">Incident Reference</div>
+            <div class="info-item-value" id="triageModalRef" style="color: var(--lw-cta, #C96F4F); font-family: var(--lw-font-mono);">--</div>
+            <div style="font-size: 0.725rem; color: var(--color-text-secondary);" id="triageModalCitizen">--</div>
+          </div>
+          <div>
+            <div class="info-item-label">Submitted Timestamp</div>
+            <div class="info-item-value" id="triageModalTime" style="font-size: 0.75rem;">--</div>
+            <div style="font-size: 0.725rem; color: var(--color-text-secondary);" id="triageModalCurrentStatus">--</div>
+          </div>
+        </div>
+
+        <!-- Location Box -->
+        <div style="background: var(--lw-bg, #F8F6EE); border: 1px solid var(--lw-border, #D9C9B2); border-radius: 4px; padding: 10px 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong id="triageModalLocationName" style="color: var(--lw-cta, #C96F4F); font-size: 0.875rem;">--</strong>
+            <div style="display: flex; gap: 8px;">
+              <a href="#" id="triageModalInternalMap" target="_blank" style="font-size: 0.725rem; color: var(--color-primary); text-decoration: underline;">[SlopeGuard Map]</a>
+              <a href="#" id="triageModalExternalMap" target="_blank" style="font-size: 0.725rem; color: #2563EB; text-decoration: underline;">[Google Maps]</a>
+            </div>
+          </div>
+          <div style="font-family: var(--lw-font-mono); font-size: 0.75rem; color: var(--color-text-primary); margin-top: 4px;" id="triageModalCoords">--</div>
+        </div>
+
+        <!-- Citizen Description -->
+        <div style="background: var(--lw-bg, #F8F6EE); border: 1px solid var(--lw-border, #D9C9B2); border-radius: 4px; padding: 12px 14px;">
+          <div class="info-item-label">Citizen Field Observation</div>
+          <p id="triageModalDesc" style="margin: 4px 0 0 0; font-size: 0.8125rem; color: var(--color-text-primary); line-height: 1.45;">--</p>
+        </div>
+
+        <!-- Triage Controls -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div>
+            <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--color-text-primary); margin-bottom: 4px;">Update Status</label>
+            <select id="triageStatusSelect" style="width: 100%; padding: 7px 10px; border-radius: 4px; border: 1px solid var(--lw-border, #D9C9B2); font-family: inherit; font-size: 0.8125rem;">
+              <option value="Under Review">Under Review</option>
+              <option value="Verified">Verified (Confirmed Hazard)</option>
+              <option value="Assigned">Assigned (Field Investigation)</option>
+              <option value="Responding">Responding (Patrol on site)</option>
+              <option value="Additional Info Requested">Additional Info Requested</option>
+              <option value="Resolved">Resolved (Cleared)</option>
+              <option value="Rejected">Rejected (Inaccurate)</option>
+              <option value="Pending Verification">Pending Verification</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--color-text-primary); margin-bottom: 4px;">Assessed Severity</label>
+            <select id="triageSeveritySelect" style="width: 100%; padding: 7px 10px; border-radius: 4px; border: 1px solid var(--lw-border, #D9C9B2); font-family: inherit; font-size: 0.8125rem;">
+              <option value="CRITICAL">CRITICAL (Immediate Danger / Total Cutoff)</option>
+              <option value="HIGH">HIGH (Severe Slip Hazard)</option>
+              <option value="MODERATE">MODERATE (Partial Lane Blockage)</option>
+              <option value="LOW">LOW (Minor Debris / Monitoring)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--color-text-primary); margin-bottom: 4px;">Confirmed Road Passability</label>
+          <select id="triagePassabilitySelect" style="width: 100%; padding: 7px 10px; border-radius: 4px; border: 1px solid var(--lw-border, #D9C9B2); font-family: inherit; font-size: 0.8125rem;">
+            <option value="completely blocked">Completely Blocked (Impassable)</option>
+            <option value="partially blocked">Partially Blocked (Single Lane Cautious)</option>
+            <option value="open">Open (Passable with caution)</option>
+            <option value="unknown">Unknown (Survey required)</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--color-text-primary); margin-bottom: 4px;">Triage Review Notes & Geotechnical Rationale</label>
+          <textarea id="triageReviewNotes" rows="3" placeholder="Enter findings, verification rationale, or reason for status update..." style="width: 100%; padding: 8px 10px; border-radius: 4px; border: 1px solid var(--lw-border, #D9C9B2); font-family: inherit; font-size: 0.8125rem;"></textarea>
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; margin-bottom: 4px;">Audit History & Actions</label>
+          <div class="audit-history-box" id="triageAuditBox"></div>
+        </div>
+      </div>
+
+      <div class="sg-modal-footer">
+        <button type="button" class="lw-btn" id="btnRequestFollowUp" style="background: #C96F4F; color: #FFFFFF; border: 1px solid #C96F4F; margin-right: auto;">Request Field Follow-Up</button>
+        <button type="button" class="lw-btn lw-btn--outline" id="btnCancelTriage">Cancel</button>
+        <button type="button" class="lw-btn lw-btn--primary" id="btnSaveTriage">Save Decision</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: ASSIGN RESCUE FORCE (Task 3B, Task 4) -->
+  <div class="sg-modal-overlay" id="adminAssignOfficerModal" role="dialog" aria-modal="true" aria-labelledby="assignModalTitle">
+    <div class="sg-modal-card">
+      <div class="sg-modal-header">
+        <h3 class="sg-modal-title" id="assignModalTitle">
+          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+          Assign Rescue Force & Dispatch Mission
+        </h3>
+        <button type="button" class="sg-modal-close-btn" id="btnCloseAssignModal">&times;</button>
+      </div>
+
+      <div class="sg-modal-body">
+        <div style="background: var(--lw-bg, #F8F6EE); border: 1px solid var(--lw-border, #D9C9B2); border-radius: 4px; padding: 10px 14px;">
+          <div style="display: flex; justify-content: space-between;">
+            <span class="info-item-label">Incident Reference</span>
+            <span id="assignModalRef" style="font-family: var(--lw-font-mono); font-weight: 700; color: var(--lw-cta, #C96F4F);">--</span>
+          </div>
+          <div style="font-size: 0.8125rem; font-weight: 600; color: var(--color-text-primary); margin-top: 4px;" id="assignModalLoc">--</div>
+          <div style="font-size: 0.725rem; color: var(--color-text-secondary); margin-top: 2px;" id="assignModalCoords">--</div>
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--color-text-primary); margin-bottom: 4px;">
+            Select Verified Rescue Force Unit <span style="color: var(--color-risk-severe);">*</span>
+          </label>
+          <select id="assignOfficerSelect" style="width: 100%; padding: 8px 10px; border-radius: 4px; border: 1px solid var(--lw-border, #D9C9B2); font-family: inherit; font-size: 0.8125rem; background: #FFFFFF;">
+            <!-- Populated dynamically from verified rescue force registry -->
+          </select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div>
+            <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--color-text-primary); margin-bottom: 4px;">Mission Priority</label>
+            <select id="assignPrioritySelect" style="width: 100%; padding: 7px 10px; border-radius: 4px; border: 1px solid var(--lw-border, #D9C9B2); font-family: inherit; font-size: 0.8125rem;">
+              <option value="CRITICAL">CRITICAL (Immediate Ground Verification)</option>
+              <option value="HIGH" selected>HIGH (Within 2 Hours)</option>
+              <option value="MEDIUM">MEDIUM (Same Day Patrol)</option>
+              <option value="ROUTINE">ROUTINE (Scheduled Reconnaissance)</option>
+            </select>
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--color-text-primary); margin-bottom: 4px;">Requested Response Window</label>
+            <select id="assignTimeWindowSelect" style="width: 100%; padding: 7px 10px; border-radius: 4px; border: 1px solid var(--lw-border, #D9C9B2); font-family: inherit; font-size: 0.8125rem;">
+              <option value="1 hour">Within 1 hour</option>
+              <option value="2 hours" selected>Within 2 hours</option>
+              <option value="4 hours">Within 4 hours</option>
+              <option value="End of Day">End of shift / today</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--color-text-primary); margin-bottom: 4px;">
+            Operational Instructions & Verification Objectives <span style="color: var(--color-risk-severe);">*</span>
+          </label>
+          <textarea id="assignInstructionsInput" rows="3" placeholder="Instruct the rescue force unit on specific inspection tasks (e.g. verify tension cracks, measure scarp depth, evaluate culvert blockages, assess single-lane passability)..." style="width: 100%; padding: 8px 10px; border-radius: 4px; border: 1px solid var(--lw-border, #D9C9B2); font-family: inherit; font-size: 0.8125rem;"></textarea>
+        </div>
+
+        <div style="font-size: 0.725rem; color: var(--color-text-secondary); background: #FAF8F2; padding: 10px 12px; border-radius: 4px; border: 1px solid var(--lw-border, #D9C9B2);">
+          <strong>Storage Notice:</strong> Mission assignment is persisted in system records. In a demonstration environment, logging in as this rescue force personnel or checking the Rescue Force Dashboard will display this assignment and allow acknowledgment and observation logging.
+        </div>
+      </div>
+
+      <div class="sg-modal-footer">
+        <button type="button" class="lw-btn lw-btn--outline" id="btnRevokeAssign" style="display: none; color: #DC2626; border-color: #DC2626; margin-right: auto;">Revoke Assignment</button>
+        <button type="button" class="lw-btn lw-btn--outline" id="btnCancelAssign">Cancel</button>
+        <button type="button" class="lw-btn lw-btn--primary" id="btnSubmitAssign">Confirm Assignment</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: RESCUE ESCALATION & EMERGENCY CONTACTS (Task 5) -->
+  <div class="sg-modal-overlay" id="adminEscalateModal" role="dialog" aria-modal="true" aria-labelledby="escalateModalTitle">
+    <div class="sg-modal-card">
+      <div class="sg-modal-header" style="background: rgba(239, 68, 68, 0.08); border-bottom-color: rgba(239, 68, 68, 0.3);">
+        <h3 class="sg-modal-title" id="escalateModalTitle" style="color: #DC2626;">
+          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          Emergency Rescue Team Escalation Protocol
+        </h3>
+        <button type="button" class="sg-modal-close-btn" id="btnCloseEscalateModal">&times;</button>
+      </div>
+
+      <div class="sg-modal-body">
+        <div style="background: rgba(239, 68, 68, 0.06); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 4px; padding: 12px 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong id="escalateIncidentRef" style="color: #DC2626; font-family: var(--lw-font-mono);">--</strong>
+            <span class="status-badge sev-critical">CRITICAL HAZARD</span>
+          </div>
+          <div id="escalateLocationText" style="font-size: 0.8125rem; font-weight: 600; color: var(--color-text-primary); margin-top: 4px;">--</div>
+          <div id="escalateCoordsText" style="font-size: 0.725rem; font-family: var(--lw-font-mono); color: var(--color-text-secondary); margin-top: 2px;">--</div>
+        </div>
+
+        <!-- Verified Emergency Agencies -->
+        <div>
+          <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--color-text-primary); margin-bottom: 4px;">
+            Target Emergency Response Agency <span style="color: var(--color-risk-severe);">*</span>
+          </label>
+          <select id="escalateAgencySelect" style="width: 100%; padding: 8px 10px; border-radius: 4px; border: 1px solid var(--lw-border, #D9C9B2); font-family: inherit; font-size: 0.8125rem; background: #FFFFFF;">
+            <!-- Populated from VERIFIED_RESCUE_CONTACTS -->
+          </select>
+        </div>
+
+        <!-- Direct Telephone Call Link (Task 5B) -->
+        <div style="background: #FAF8F2; border: 1px solid var(--lw-border, #D9C9B2); border-radius: 4px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <div style="font-size: 0.6875rem; color: var(--color-text-muted); text-transform: uppercase;">Direct Line / Dialer</div>
+            <div style="font-size: 1rem; font-weight: 800; font-family: var(--lw-font-mono); color: var(--color-text-primary);" id="escalatePhoneDisplay">--</div>
+            <div style="font-size: 0.7rem; color: var(--color-text-secondary);" id="escalateAgencyType">--</div>
+          </div>
+          <a href="#" id="escalateTelLink" class="lw-btn lw-btn--sm lw-btn--primary" style="text-decoration: none; display: flex; align-items: center; gap: 6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+            <span>Initiate Call via Device</span>
+          </a>
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--color-text-primary); margin-bottom: 4px;">
+            Action / Outcome Status <span style="color: var(--color-risk-severe);">*</span>
+          </label>
+          <select id="escalateOutcomeSelect" style="width: 100%; padding: 8px 10px; border-radius: 4px; border: 1px solid var(--lw-border, #D9C9B2); font-family: inherit; font-size: 0.8125rem; background: #FFFFFF;">
+            <option value="INITIATED">Initiated — Outbound telephone call dialed from command console</option>
+            <option value="CONFIRMED_EN_ROUTE">Confirmed En Route — Rescue team acknowledged & mobilized</option>
+            <option value="ACKNOWLEDGED_BY_TEAM">Acknowledged by Team — Duty officer verified incident details</option>
+            <option value="RECORDED_LOCALLY">Recorded Locally — Prepared dispatch record (Awaiting connection)</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 0.8125rem; color: var(--color-text-primary); cursor: pointer; padding: 4px 0;">
+            <input type="checkbox" id="escalateHumanConfirmed" style="width: 16px; height: 16px; accent-color: var(--color-primary);" />
+            <span><strong>Human Operator Confirmation:</strong> I confirm a live operator was reached or human verification was completed.</span>
+          </label>
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--color-text-primary); margin-bottom: 4px;">
+            Escalation Reason & Danger Rationale <span style="color: var(--color-risk-severe);">*</span>
+          </label>
+          <input type="text" id="escalateReasonInput" value="Active slope debris flow threatening corridor transit and human safety." style="width: 100%; padding: 7px 10px; border-radius: 4px; border: 1px solid var(--lw-border, #D9C9B2); font-family: inherit; font-size: 0.8125rem;" />
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--color-text-primary); margin-bottom: 4px;">Dispatch Notes & Operator Log</label>
+          <textarea id="escalateDispatchNotes" rows="2" placeholder="Record duty officer name, unit dispatched, ETA, radio frequency or dispatch remarks..." style="width: 100%; padding: 8px 10px; border-radius: 4px; border: 1px solid var(--lw-border, #D9C9B2); font-family: inherit; font-size: 0.8125rem;"></textarea>
+        </div>
+      </div>
+
+      <div class="sg-modal-footer" style="justify-content: space-between;">
+        <button type="button" class="lw-btn lw-btn--outline" id="btnStandDownEscalation" style="color: var(--color-text-muted); display: none;">Stand Down Escalation</button>
+        <div style="display: flex; gap: 10px; margin-left: auto;">
+          <button type="button" class="lw-btn lw-btn--outline" id="btnCancelEscalate">Cancel</button>
+          <button type="button" class="lw-btn lw-btn--primary" id="btnConfirmEscalate" style="background: #DC2626; border-color: #DC2626;">Record Escalation</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: PHOTO LIGHTBOX (Task 1) -->
+  <div class="sg-modal-overlay" id="adminPhotoLightboxModal" role="dialog" aria-modal="true">
+    <div class="sg-modal-card" style="max-width: 800px; background: #1A231B;">
+      <div class="sg-modal-header" style="background: #1A231B; border-bottom: 1px solid #30432D;">
+        <h3 class="sg-modal-title" id="lightboxTitle" style="color: #FFFFFF;">Photo Evidence Attachment</h3>
+        <button type="button" class="sg-modal-close-btn" id="btnCloseLightbox" style="color: #FFFFFF;">&times;</button>
+      </div>
+      <div class="sg-modal-body" style="padding: 16px; text-align: center;">
+        <img id="lightboxImage" src="" alt="Full Evidence Attachment" style="max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 4px;" />
+        <div id="lightboxMeta" style="margin-top: 10px; font-size: 0.75rem; color: #9EAF99;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 5: RESCUE TEAM LIVE GPS TRACKING -->
+  <div class="sg-modal-overlay" id="adminLiveTrackingModal" role="dialog" aria-modal="true">
+    <div class="sg-modal-card" style="max-width: 820px;">
+      <div class="sg-modal-header">
+        <h3 class="sg-modal-title">
+          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          Rescue Team Live GPS Tracking & Trail
+        </h3>
+        <button type="button" class="sg-modal-close-btn" id="btnCloseLiveTrackingModal">&times;</button>
+      </div>
+      <div class="sg-modal-body">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <div>
+            <strong id="trackingModalTitle" style="color: var(--lw-text, #2E3A2F); font-size: 0.9375rem;">Incident Tracking</strong>
+            <div id="trackingModalSubtitle" style="font-size: 0.75rem; color: var(--color-text-secondary);">--</div>
+          </div>
+          <div id="trackingModalTelemetryPill" style="padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-family: var(--lw-font-mono); background: #FAF8F2; border: 1px solid #D9C9B2;">
+            Connecting...
+          </div>
+        </div>
+        <div id="adminTrackingMap" style="height: 420px; width: 100%; border-radius: 4px; border: 1px solid #D9C9B2;"></div>
+      </div>
+      <div class="sg-modal-footer">
+        <button type="button" class="lw-btn lw-btn--outline" id="btnCloseLiveTrackingModalBottom">Close Tracking</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet Library -->
+  <script src="../js/leaflet.js"></script>
+
   <!-- Core Services -->
   <script src="../js/core/config.js"></script>
   <script src="../js/core/content.js"></script>
@@ -298,16 +904,18 @@
   <script src="../js/core/auth.js"></script>
   <script src="../js/core/ui.js"></script>
   <script src="../js/core/guard.js"></script>
+  <script src="../js/services/reports-storage.js"></script>
+  <script src="../js/services/incidents-service.js"></script>
 
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      // Require staff role: officer or admin
-      if (!window.LW.guard.requireRole(["officer", "admin"])) return;
-      const user = window.LW.auth.getUser();
+    document.addEventListener("DOMContentLoaded", async () => {
+      // Require staff role: rescue_force, officer, or admin
+      if (!window.LW.guard.requireRole(["rescue_force", "officer", "admin"])) return;
+      const user = window.LW.auth.getUser() || { name: "NER Command Staff", role: "ADMIN", district: "NER Command" };
 
       document.getElementById("sidebarName").textContent = user.name || "Command Staff";
       document.getElementById("sidebarAvatar").textContent = (user.name || "A").charAt(0).toUpperCase();
-      document.getElementById("sidebarRole").textContent = `${(user.role || 'OFFICER').toUpperCase()} • ${user.district || 'NER Command'}`;
+      document.getElementById("sidebarRole").textContent = `${(user.role || 'ADMIN').toUpperCase()} • ${user.district || 'NER Command'}`;
 
       document.getElementById("sidebarLogout").onclick = async () => {
         await window.LW.auth.logout();
@@ -318,6 +926,901 @@
       const sidebar = document.getElementById("dashboardSidebar");
       if (mobileToggle && sidebar) {
         mobileToggle.onclick = () => sidebar.classList.toggle("mobile-open");
+      }
+
+      // STATE
+      let allReports = [];
+      let currentFilterStatus = "all";
+      let currentSearchQuery = "";
+      let selectedReport = null;
+
+      // DOM ELEMENTS
+      const searchInput = document.getElementById("adminReportSearchInput");
+      const searchClear = document.getElementById("adminReportSearchClear");
+      const filterBar = document.getElementById("adminReportFilterBar");
+      const tbody = document.getElementById("adminIncidentReportsTbody");
+      const tableBadge = document.getElementById("adminReportTableBadge");
+
+      // Load & Render Reports
+      async function loadReports() {
+        try {
+          if (window.LW.reportsStorage) {
+            allReports = await window.LW.reportsStorage.getAllReports();
+          } else if (window.LW.incidentsService) {
+            allReports = await window.LW.incidentsService.getAllIncidents();
+          }
+        } catch (e) {
+          console.error("[AdminDashboard] Failed to read reports:", e);
+          allReports = [];
+        }
+
+        updateMetrics();
+        renderTable();
+      }
+
+      // Update Summary Cards & Badge Counts
+      function updateMetrics() {
+        const total = allReports.length;
+        const pending = allReports.filter(r => {
+          const s = (r.status || "").toLowerCase();
+          return s.includes("pending") || s.includes("review");
+        }).length;
+
+        const assigned = allReports.filter(r => {
+          const s = (r.status || "").toLowerCase();
+          return s === "assigned" || s === "responding" || Boolean(r.assigned_officer);
+        }).length;
+
+        const escalated = allReports.filter(r => {
+          const s = (r.status || "").toLowerCase();
+          return s === "escalated" || r.severity === "CRITICAL" || Boolean(r.escalation);
+        }).length;
+
+        const resolved = allReports.filter(r => (r.status || "").toLowerCase() === "resolved").length;
+        const verified = allReports.filter(r => (r.status || "").toLowerCase() === "verified").length;
+        const underReview = allReports.filter(r => (r.status || "").toLowerCase() === "under review").length;
+        const responding = allReports.filter(r => (r.status || "").toLowerCase() === "responding").length;
+
+        // Metric Cards
+        const totalEl = document.getElementById("statAdminTotalReports");
+        const pendingEl = document.getElementById("statAdminPendingReports");
+        const assignedEl = document.getElementById("statAdminAssignedReports");
+        const escalatedEl = document.getElementById("statAdminEscalatedReports");
+
+        if (totalEl) totalEl.textContent = total;
+        if (pendingEl) pendingEl.textContent = `${pending} Pending`;
+        if (assignedEl) assignedEl.textContent = `${assigned} Assigned`;
+        if (escalatedEl) escalatedEl.textContent = `${escalated} Critical`;
+
+        // Pill Counters
+        const setPill = (id, count) => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = count;
+        };
+        setPill("pillCountAll", total);
+        setPill("pillCountPending", pending);
+        setPill("pillCountUnderReview", underReview);
+        setPill("pillCountAssigned", allReports.filter(r => (r.status || "").toLowerCase() === "assigned").length);
+        setPill("pillCountResponding", responding);
+        setPill("pillCountVerified", verified);
+        setPill("pillCountEscalated", escalated);
+        setPill("pillCountResolved", resolved);
+
+        if (tableBadge) tableBadge.textContent = `${total} REPORT${total !== 1 ? 'S' : ''}`;
+      }
+
+      // Helper Status Badge Classes
+      function getStatusBadgeHtml(status) {
+        const s = (status || "Pending Verification").toLowerCase();
+        let cls = "status-pending";
+        if (s.includes("under")) cls = "status-under_review";
+        else if (s === "assigned") cls = "status-assigned";
+        else if (s === "responding") cls = "status-responding";
+        else if (s === "verified") cls = "status-verified";
+        else if (s === "escalated") cls = "status-escalated";
+        else if (s === "resolved") cls = "status-resolved";
+        else if (s === "rejected") cls = "status-rejected";
+
+        return `<span class="status-badge ${cls}">${status || "Pending Verification"}</span>`;
+      }
+
+      function getSeverityBadgeHtml(severity) {
+        const sev = (severity || "MODERATE").toUpperCase();
+        let cls = "sev-moderate";
+        if (sev === "CRITICAL") cls = "sev-critical";
+        else if (sev === "HIGH") cls = "sev-high";
+        else if (sev === "LOW") cls = "sev-low";
+
+        return `<span class="status-badge ${cls}">${sev}</span>`;
+      }
+
+      // Render Table with Real Records
+      function renderTable() {
+        if (!tbody) return;
+
+        // 1. Search Query Filter (Task 2)
+        let filtered = allReports;
+        if (currentSearchQuery) {
+          if (window.LW.reportsStorage?.searchReports) {
+            filtered = window.LW.reportsStorage.searchReports(allReports, currentSearchQuery, "admin");
+          } else {
+            const q = currentSearchQuery.toLowerCase();
+            filtered = allReports.filter(r => 
+              (r.id || "").toLowerCase().includes(q) ||
+              (r.incident_category || r.incidentCategory || "").toLowerCase().includes(q) ||
+              (r.description || "").toLowerCase().includes(q) ||
+              (r.location?.placeName || r.location?.roadName || "").toLowerCase().includes(q) ||
+              (r.reporter_name || "").toLowerCase().includes(q)
+            );
+          }
+        }
+
+        // 2. Status Pill Filter
+        if (currentFilterStatus !== "all") {
+          filtered = filtered.filter(r => {
+            const st = (r.status || "").toLowerCase();
+            if (currentFilterStatus === "pending verification") return st.includes("pending");
+            if (currentFilterStatus === "assigned") return st === "assigned" || (r.assigned_officer && st !== "resolved");
+            if (currentFilterStatus === "responding") return st === "responding";
+            if (currentFilterStatus === "escalated") return st === "escalated" || r.severity === "CRITICAL" || Boolean(r.escalation);
+            return st === currentFilterStatus;
+          });
+        }
+
+        if (filtered.length === 0) {
+          const emptyMsg = currentSearchQuery
+            ? `No incident reports match query '<em>${escapeHtml(currentSearchQuery)}</em>'.`
+            : `No incident reports found under filter '<em>${escapeHtml(currentFilterStatus)}</em>'.`;
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="8" style="text-align: center; padding: 36px; color: var(--color-text-muted);">
+                <div style="font-size: 1.1rem; margin-bottom: 6px;">📋</div>
+                <div>${emptyMsg}</div>
+                ${currentSearchQuery ? `<button type="button" id="btnResetSearchInline" class="lw-btn lw-btn--sm lw-btn--outline" style="margin-top: 10px;">Clear Search</button>` : ''}
+              </td>
+            </tr>
+          `;
+          const resetBtn = document.getElementById("btnResetSearchInline");
+          if (resetBtn) {
+            resetBtn.onclick = () => {
+              searchInput.value = "";
+              currentSearchQuery = "";
+              searchClear.style.display = "none";
+              renderTable();
+            };
+          }
+          return;
+        }
+
+        tbody.innerHTML = filtered.map(r => {
+          const id = r.id || "--";
+          const subDate = r.reported_timestamp || r.submittedAt;
+          const dateStr = subDate ? new Date(subDate).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : "--";
+          const reporter = r.reporter_name || r.reporterName || "Citizen Observer";
+          const category = r.incident_category || r.incidentCategory || r.incident_type || "Landslide Hazard";
+          const desc = r.description || "No written description provided.";
+          const descSnippet = desc.length > 70 ? desc.substring(0, 70) + "..." : desc;
+          const locName = r.location?.roadName || r.location?.placeName || r.location_description || "Regional Slope";
+          const lat = r.latitude ?? r.location?.latitude;
+          const lng = r.longitude ?? r.location?.longitude;
+          const coordsText = (lat != null && lng != null) ? `${Number(lat).toFixed(4)}, ${Number(lng).toFixed(4)}` : "No GPS";
+          const passability = r.road_passability || r.roadPassability || r.verifiedPassability || "unknown";
+
+          // Photo Thumbnails
+          let photosHtml = `<span style="font-size: 0.725rem; color: var(--color-text-muted);">No photos</span>`;
+          if (Array.isArray(r.photos) && r.photos.length > 0) {
+            const p = r.photos[0];
+            const pUrl = p.url || p.previewUrl || '';
+            const countBadge = r.photos.length > 1 ? `<span style="position: absolute; right: 2px; bottom: 2px; background: rgba(0,0,0,0.7); color: #fff; font-size: 0.65rem; padding: 1px 4px; border-radius: 3px;">+${r.photos.length - 1}</span>` : '';
+            photosHtml = `
+              <div style="position: relative; display: inline-block; cursor: pointer;" data-action="preview-photo" data-report-id="${escapeHtml(id)}">
+                <img src="${pUrl}" alt="Evidence" style="width: 44px; height: 44px; object-fit: cover; border-radius: 4px; border: 1px solid var(--lw-border, #D9C9B2);" onerror="this.style.display='none'" />
+                ${countBadge}
+              </div>
+            `;
+          }
+
+          // Assignment & Escalation Badges
+          const officer = r.assigned_officer || r.officer_assignment;
+          let officerHtml = "";
+          if (officer) {
+            const taskSt = officer.taskStatus || "PENDING";
+            const taskColor = taskSt === "COMPLETED" ? "#15803D" : (taskSt === "IN_PROGRESS" || taskSt === "ACKNOWLEDGED" ? "#2563EB" : "#8C6A3C");
+            officerHtml = `
+              <div style="font-size: 0.725rem; margin-top: 4px; padding: 2px 6px; background: rgba(59, 130, 246, 0.08); border-radius: 3px; border-left: 2px solid #2563EB;">
+                <strong>Rescue Force:</strong> ${escapeHtml(officer.name || 'Assigned')}<br/>
+                <span style="font-size: 0.6875rem; color: ${taskColor}; font-weight: 700;">Mission: ${taskSt}</span>
+                ${officer.inspectionCompleted ? `<span title="Physically Inspected on Site"> 📍</span>` : ''}
+              </div>
+            `;
+          }
+
+          let escalationHtml = "";
+          if (r.escalation) {
+            escalationHtml = `
+              <div style="font-size: 0.7rem; margin-top: 4px; padding: 2px 6px; background: rgba(239, 68, 68, 0.1); border-radius: 3px; color: #DC2626; border-left: 2px solid #DC2626;">
+                <strong>Escalated:</strong> ${escapeHtml(r.escalation.agency || 'Emergency')}<br/>
+                <span style="font-size: 0.65rem;">Outcome: ${escapeHtml(r.escalation.outcomeStatus || 'INITIATED')}</span>
+              </div>
+            `;
+          }
+
+          // Map Links
+          const mapDeepLink = `../map.html?incident=${encodeURIComponent(id)}`;
+          const googleMapsLink = (lat != null && lng != null) ? `https://www.google.com/maps?q=${lat},${lng}` : null;
+
+          return `
+            <tr data-report-id="${escapeHtml(id)}">
+              <td>
+                <div style="font-family: var(--lw-font-mono); font-weight: 700; color: var(--lw-cta, #C96F4F); font-size: 0.8125rem;">${escapeHtml(id)}</div>
+                <div style="font-size: 0.7rem; color: var(--color-text-muted); margin-top: 2px;">${escapeHtml(dateStr)}</div>
+              </td>
+              <td>
+                <strong style="color: var(--color-text-primary); font-size: 0.8125rem;">${escapeHtml(reporter)}</strong>
+                <div style="font-size: 0.7rem; color: var(--color-text-secondary);">${escapeHtml(r.reporter_user_id || 'Citizen')}</div>
+              </td>
+              <td>
+                <div style="font-weight: 600; color: var(--color-text-primary); font-size: 0.8125rem;">${escapeHtml(category)}</div>
+                <div style="font-size: 0.725rem; color: var(--color-text-secondary); margin-top: 2px;" title="${escapeHtml(desc)}">${escapeHtml(descSnippet)}</div>
+              </td>
+              <td>
+                <div style="margin-bottom: 4px;">${getSeverityBadgeHtml(r.severity)}</div>
+                <div style="font-size: 0.6875rem; color: var(--color-text-secondary); text-transform: capitalize;">${escapeHtml(passability)}</div>
+              </td>
+              <td>
+                <div style="font-weight: 600; color: var(--color-text-primary); font-size: 0.8125rem;">${escapeHtml(locName)}</div>
+                <div style="font-family: var(--lw-font-mono); font-size: 0.7rem; color: var(--color-text-secondary); margin-top: 2px;">
+                  ${coordsText}
+                </div>
+                <div style="margin-top: 4px; display: flex; gap: 6px;">
+                  <a href="${mapDeepLink}" target="_blank" style="font-size: 0.6875rem; color: var(--color-primary); text-decoration: underline;">[Risk Map]</a>
+                  ${googleMapsLink ? `<a href="${googleMapsLink}" target="_blank" style="font-size: 0.6875rem; color: #2563EB; text-decoration: underline;">[Google Maps]</a>` : ''}
+                </div>
+              </td>
+              <td>
+                ${photosHtml}
+              </td>
+              <td>
+                <div>${getStatusBadgeHtml(r.status)}</div>
+                ${officerHtml}
+                ${escalationHtml}
+              </td>
+              <td style="text-align: right;">
+                <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-end;">
+                  <button type="button" class="btn-action-triage" data-action="triage" data-report-id="${escapeHtml(id)}">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    <span>Triage</span>
+                  </button>
+                  <button type="button" class="btn-action-assign" data-action="assign" data-report-id="${escapeHtml(id)}">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+                    <span>Assign Rescue Force</span>
+                  </button>
+                  <button type="button" class="btn-action-escalate" data-action="escalate" data-report-id="${escapeHtml(id)}">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    <span>Escalate Rescue</span>
+                  </button>
+                  ${(r.isTrackingActive || r.currentLatitude || (r.journeyTrail && r.journeyTrail.length > 0) || r.status === "Responding" || r.status === "Assigned") ? `
+                    <button type="button" class="btn-action-track" data-action="track-live" data-report-id="${escapeHtml(id)}" style="background: rgba(46, 58, 47, 0.08); color: #2E3A2F; border: 1px solid #6B7F5B; padding: 4px 8px; border-radius: 4px; font-size: 0.6875rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-family: inherit;">
+                      <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#16A34A;"></span>
+                      <span>Track Force GPS</span>
+                    </button>
+                  ` : ''}
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join("");
+
+        // Wire Event Listeners on Table Rows
+        tbody.querySelectorAll('[data-action="triage"]').forEach(btn => {
+          btn.onclick = () => {
+            const report = allReports.find(r => r.id === btn.dataset.reportId);
+            if (report) openTriageModal(report);
+          };
+        });
+
+        tbody.querySelectorAll('[data-action="assign"]').forEach(btn => {
+          btn.onclick = () => {
+            const report = allReports.find(r => r.id === btn.dataset.reportId);
+            if (report) openAssignModal(report);
+          };
+        });
+
+        tbody.querySelectorAll('[data-action="escalate"]').forEach(btn => {
+          btn.onclick = () => {
+            const report = allReports.find(r => r.id === btn.dataset.reportId);
+            if (report) openEscalateModal(report);
+          };
+        });
+
+        tbody.querySelectorAll('[data-action="track-live"]').forEach(btn => {
+          btn.onclick = () => {
+            const report = allReports.find(r => r.id === btn.dataset.reportId);
+            if (report) openLiveTrackingModal(report);
+          };
+        });
+
+        tbody.querySelectorAll('[data-action="preview-photo"]').forEach(wrap => {
+          wrap.onclick = () => {
+            const report = allReports.find(r => r.id === wrap.dataset.reportId);
+            if (report && report.photos && report.photos.length > 0) {
+              openLightbox(report.photos[0], report);
+            }
+          };
+        });
+      }
+
+      // Safe HTML Escaping
+      function escapeHtml(str) {
+        if (!str) return "";
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      // -------------------------------------------------------------
+      // SEARCH & FILTER LISTENERS (Task 2)
+      // -------------------------------------------------------------
+      let searchDebounceTimer = null;
+      if (searchInput) {
+        searchInput.addEventListener("input", (e) => {
+          clearTimeout(searchDebounceTimer);
+          searchDebounceTimer = setTimeout(() => {
+            currentSearchQuery = e.target.value.trim();
+            if (searchClear) {
+              searchClear.style.display = currentSearchQuery ? "block" : "none";
+            }
+            renderTable();
+          }, 150);
+        });
+      }
+
+      if (searchClear) {
+        searchClear.addEventListener("click", () => {
+          searchInput.value = "";
+          currentSearchQuery = "";
+          searchClear.style.display = "none";
+          renderTable();
+          searchInput.focus();
+        });
+      }
+
+      if (filterBar) {
+        filterBar.querySelectorAll(".filter-pill").forEach(pill => {
+          pill.addEventListener("click", () => {
+            filterBar.querySelectorAll(".filter-pill").forEach(p => p.classList.remove("active"));
+            pill.classList.add("active");
+            currentFilterStatus = pill.dataset.status.toLowerCase();
+            renderTable();
+          });
+        });
+      }
+
+      // -------------------------------------------------------------
+      // MODAL 1: TRIAGE WORKFLOW (Task 3A)
+      // -------------------------------------------------------------
+      const triageModal = document.getElementById("adminTriageModal");
+      function openTriageModal(report) {
+        selectedReport = report;
+        document.getElementById("triageModalRef").textContent = report.id;
+        document.getElementById("triageModalCitizen").textContent = `Citizen: ${report.reporter_name || report.reporter_user_id || 'Observer'}`;
+        document.getElementById("triageModalTime").textContent = report.reported_timestamp ? new Date(report.reported_timestamp).toLocaleString() : '--';
+        document.getElementById("triageModalCurrentStatus").textContent = `Current: ${report.status || 'Pending'}`;
+        
+        const locName = report.location?.roadName || report.location?.placeName || report.location_description || "Regional Slope";
+        document.getElementById("triageModalLocationName").textContent = locName;
+        const lat = report.latitude ?? report.location?.latitude;
+        const lng = report.longitude ?? report.location?.longitude;
+        document.getElementById("triageModalCoords").textContent = (lat != null && lng != null) ? `Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}` : "No GPS Coordinates";
+
+        document.getElementById("triageModalInternalMap").href = `../map.html?incident=${encodeURIComponent(report.id)}`;
+        document.getElementById("triageModalExternalMap").href = (lat != null && lng != null) ? `https://www.google.com/maps?q=${lat},${lng}` : '#';
+
+        document.getElementById("triageModalDesc").textContent = report.description || "No written description provided.";
+        document.getElementById("triageStatusSelect").value = report.status || "Under Review";
+        document.getElementById("triageSeveritySelect").value = report.severity || "MODERATE";
+        document.getElementById("triagePassabilitySelect").value = report.verifiedPassability || report.road_passability || "unknown";
+        document.getElementById("triageReviewNotes").value = report.review_notes || report.reviewReason || "";
+
+        // Audit Trail
+        const auditBox = document.getElementById("triageAuditBox");
+        const trail = report.audit_trail || report.auditTrail || [];
+        if (trail.length === 0) {
+          auditBox.innerHTML = `<span style="font-size: 0.725rem; color: var(--color-text-muted);">No audit events recorded yet.</span>`;
+        } else {
+          auditBox.innerHTML = trail.map(entry => `
+            <div class="audit-entry">
+              <div class="audit-entry-top">
+                <span style="font-weight: 700; color: var(--color-text-primary);">${escapeHtml(entry.action || 'UPDATE')}</span>
+                <span>${entry.timestamp ? new Date(entry.timestamp).toLocaleString() : ''}</span>
+              </div>
+              <div style="color: var(--color-primary); font-size: 0.7rem;">Staff / Actor: ${escapeHtml(entry.actor || 'System')}</div>
+              <div style="color: var(--color-text-secondary); margin-top: 2px;">${escapeHtml(entry.notes || '')}</div>
+            </div>
+          `).join("");
+        }
+
+        triageModal.classList.add("active");
+      }
+
+      function closeTriageModal() {
+        triageModal.classList.remove("active");
+      }
+
+      document.getElementById("btnCloseTriageModal").onclick = closeTriageModal;
+      document.getElementById("btnCancelTriage").onclick = closeTriageModal;
+
+      document.getElementById("btnSaveTriage").onclick = async () => {
+        if (!selectedReport) return;
+        const newStatus = document.getElementById("triageStatusSelect").value;
+        const newSeverity = document.getElementById("triageSeveritySelect").value;
+        const newPassability = document.getElementById("triagePassabilitySelect").value;
+        const notes = document.getElementById("triageReviewNotes").value.trim();
+
+        try {
+          const btn = document.getElementById("btnSaveTriage");
+          btn.disabled = true;
+          btn.textContent = "Saving...";
+
+          selectedReport.severity = newSeverity;
+          await window.LW.reportsStorage.updateReportStatus(selectedReport.id, newStatus, {
+            reviewReason: notes,
+            verifiedPassability: newPassability,
+            actor: user.name || "Operations Center Admin"
+          });
+
+          window.LW.ui?.toast(`Report ${selectedReport.id} updated to ${newStatus}.`, "success");
+          closeTriageModal();
+          await loadReports();
+        } catch (err) {
+          console.error(err);
+          window.LW.ui?.toast(`Failed to save triage update: ${err.message}`, "error");
+        } finally {
+          const btn = document.getElementById("btnSaveTriage");
+          btn.disabled = false;
+          btn.textContent = "Save Decision";
+        }
+      };
+
+      document.getElementById("btnRequestFollowUp").onclick = async () => {
+        if (!selectedReport) return;
+        const notes = document.getElementById("triageReviewNotes").value.trim();
+        if (!notes) {
+          window.LW.ui?.toast("Please provide specific follow-up instructions in the review notes box.", "error");
+          document.getElementById("triageReviewNotes").focus();
+          return;
+        }
+
+        try {
+          const btn = document.getElementById("btnRequestFollowUp");
+          btn.disabled = true;
+          btn.textContent = "Requesting...";
+
+          await window.LW.reportsStorage.requestFollowup(selectedReport.id, notes, user);
+          window.LW.ui?.toast(`Follow-up requested from Rescue Team for ${selectedReport.id}.`, "success");
+          closeTriageModal();
+          await loadReports();
+        } catch (err) {
+          console.error(err);
+          window.LW.ui?.toast(`Failed to request follow-up: ${err.message}`, "error");
+        } finally {
+          const btn = document.getElementById("btnRequestFollowUp");
+          btn.disabled = false;
+          btn.textContent = "Request Field Follow-Up";
+        }
+      };
+
+      // -------------------------------------------------------------
+      // MODAL 2: OFFICER ASSIGNMENT (Task 3B)
+      // -------------------------------------------------------------
+      const assignModal = document.getElementById("adminAssignOfficerModal");
+      const officerSelect = document.getElementById("assignOfficerSelect");
+
+      // Populate verified officers
+      function populateOfficersDropdown() {
+        if (!officerSelect) return;
+        const officers = window.LW.reportsStorage?.getVerifiedOfficers ? window.LW.reportsStorage.getVerifiedOfficers() : [];
+        officerSelect.innerHTML = officers.map(o => `
+          <option value="${escapeHtml(o.id)}">${escapeHtml(o.name)} — ${escapeHtml(o.district)} (${escapeHtml(o.phone)})</option>
+        `).join("");
+      }
+      populateOfficersDropdown();
+
+      function openAssignModal(report) {
+        selectedReport = report;
+        document.getElementById("assignModalRef").textContent = report.id;
+        const locName = report.location?.roadName || report.location?.placeName || report.location_description || "Regional Slope";
+        document.getElementById("assignModalLoc").textContent = locName;
+        const lat = report.latitude ?? report.location?.latitude;
+        const lng = report.longitude ?? report.location?.longitude;
+        document.getElementById("assignModalCoords").textContent = (lat != null && lng != null) ? `Coordinates: ${lat.toFixed(5)}, ${lng.toFixed(5)}` : "GPS Not Available";
+
+        // Prepopulate if already assigned
+        if (report.assigned_officer?.id) {
+          officerSelect.value = report.assigned_officer.id;
+          document.getElementById("assignPrioritySelect").value = report.assigned_officer.priority || "HIGH";
+          document.getElementById("assignTimeWindowSelect").value = report.assigned_officer.requestedTime || "2 hours";
+          document.getElementById("assignInstructionsInput").value = report.assigned_officer.instructions || "";
+        } else {
+          document.getElementById("assignInstructionsInput").value = `Verify on-site slope movement, inspect culvert drainage, evaluate road passability, and report back.`;
+        }
+
+        // Revoke Assignment button visibility
+        const revokeBtn = document.getElementById("btnRevokeAssign");
+        if (revokeBtn) {
+          if (report.assigned_officer?.id || report.assigned_rescue_force?.id) {
+            revokeBtn.style.display = "inline-block";
+            revokeBtn.onclick = async () => {
+              const teamName = report.assigned_officer?.name || report.assigned_rescue_force?.name || "the assigned team";
+              if (confirm(`Are you sure you want to revoke the mission assignment from ${teamName}?`)) {
+                try {
+                  revokeBtn.disabled = true;
+                  revokeBtn.textContent = "Revoking...";
+                  await window.LW.reportsStorage.revokeRescueForce(report.id, "Revoked by Operations Center Admin", user);
+                  window.LW.ui?.toast("Assignment revoked successfully.", "info");
+                  closeAssignModal();
+                  await loadReports();
+                } catch (err) {
+                  window.LW.ui?.toast(`Failed to revoke assignment: ${err.message}`, "error");
+                } finally {
+                  revokeBtn.disabled = false;
+                  revokeBtn.textContent = "Revoke Assignment";
+                }
+              }
+            };
+          } else {
+            revokeBtn.style.display = "none";
+          }
+        }
+
+        assignModal.classList.add("active");
+      }
+
+      function closeAssignModal() {
+        assignModal.classList.remove("active");
+      }
+
+      document.getElementById("btnCloseAssignModal").onclick = closeAssignModal;
+      document.getElementById("btnCancelAssign").onclick = closeAssignModal;
+
+      document.getElementById("btnSubmitAssign").onclick = async () => {
+        if (!selectedReport) return;
+        const officerId = officerSelect.value;
+        const officers = window.LW.reportsStorage?.getVerifiedOfficers ? window.LW.reportsStorage.getVerifiedOfficers() : [];
+        const officerObj = officers.find(o => o.id === officerId) || { id: officerId, name: officerId };
+
+        const priority = document.getElementById("assignPrioritySelect").value;
+        const timeWindow = document.getElementById("assignTimeWindowSelect").value;
+        const instructions = document.getElementById("assignInstructionsInput").value.trim();
+
+        if (!instructions) {
+          window.LW.ui?.toast("Please provide operational instructions for the officer.", "warning");
+          document.getElementById("assignInstructionsInput").focus();
+          return;
+        }
+
+        try {
+          const btn = document.getElementById("btnSubmitAssign");
+          btn.disabled = true;
+          btn.textContent = "Assigning...";
+
+          await window.LW.reportsStorage.assignOfficer(
+            selectedReport.id,
+            officerObj,
+            instructions,
+            priority,
+            timeWindow,
+            user
+          );
+
+          window.LW.ui?.toast(`Task assigned to ${officerObj.name} (${priority} priority).`, "success");
+          closeAssignModal();
+          await loadReports();
+        } catch (err) {
+          console.error(err);
+          window.LW.ui?.toast(`Failed to assign officer: ${err.message}`, "error");
+        } finally {
+          const btn = document.getElementById("btnSubmitAssign");
+          btn.disabled = false;
+          btn.textContent = "Confirm Assignment";
+        }
+      };
+
+      // -------------------------------------------------------------
+      // MODAL 3: RESCUE ESCALATION (Task 5)
+      // -------------------------------------------------------------
+      const escalateModal = document.getElementById("adminEscalateModal");
+      const agencySelect = document.getElementById("escalateAgencySelect");
+      const phoneDisplay = document.getElementById("escalatePhoneDisplay");
+      const agencyTypeEl = document.getElementById("escalateAgencyType");
+      const telLink = document.getElementById("escalateTelLink");
+
+      function populateAgencies() {
+        if (!agencySelect) return;
+        const contacts = window.LW.reportsStorage?.getVerifiedRescueContacts ? window.LW.reportsStorage.getVerifiedRescueContacts() : [];
+        agencySelect.innerHTML = contacts.map((c, i) => `
+          <option value="${i}">${escapeHtml(c.agency)} (${escapeHtml(c.displayPhone)})</option>
+        `).join("");
+
+        updateAgencyDetails();
+      }
+
+      function updateAgencyDetails() {
+        const contacts = window.LW.reportsStorage?.getVerifiedRescueContacts ? window.LW.reportsStorage.getVerifiedRescueContacts() : [];
+        const idx = parseInt(agencySelect.value, 10) || 0;
+        const contact = contacts[idx] || contacts[0];
+        if (contact) {
+          phoneDisplay.textContent = contact.displayPhone || contact.phone;
+          agencyTypeEl.textContent = `${contact.type} • Coverage: ${contact.coverage}`;
+          telLink.href = `tel:${contact.phone}`;
+        }
+      }
+
+      agencySelect.onchange = updateAgencyDetails;
+      populateAgencies();
+
+      function openEscalateModal(report) {
+        selectedReport = report;
+        document.getElementById("escalateIncidentRef").textContent = report.id;
+        const locName = report.location?.roadName || report.location?.placeName || report.location_description || "Regional Slope";
+        document.getElementById("escalateLocationText").textContent = locName;
+        const lat = report.latitude ?? report.location?.latitude;
+        const lng = report.longitude ?? report.location?.longitude;
+        document.getElementById("escalateCoordsText").textContent = (lat != null && lng != null) ? `Coordinates: ${lat.toFixed(5)}, ${lng.toFixed(5)}` : "No GPS Available";
+
+        // Prepopulate if already escalated
+        const btnStandDown = document.getElementById("btnStandDownEscalation");
+        if (report.escalation) {
+          document.getElementById("escalateOutcomeSelect").value = report.escalation.outcomeStatus || "INITIATED";
+          document.getElementById("escalateHumanConfirmed").checked = Boolean(report.escalation.isRealActionRecorded);
+          document.getElementById("escalateReasonInput").value = report.escalation.reason || "";
+          document.getElementById("escalateDispatchNotes").value = report.escalation.dispatchNotes || "";
+          btnStandDown.style.display = "block";
+        } else {
+          document.getElementById("escalateOutcomeSelect").value = "INITIATED";
+          document.getElementById("escalateHumanConfirmed").checked = false;
+          document.getElementById("escalateReasonInput").value = "Severe active slope failure threatening transit or human safety.";
+          document.getElementById("escalateDispatchNotes").value = "";
+          btnStandDown.style.display = "none";
+        }
+
+        escalateModal.classList.add("active");
+      }
+
+      function closeEscalateModal() {
+        escalateModal.classList.remove("active");
+      }
+
+      document.getElementById("btnCloseEscalateModal").onclick = closeEscalateModal;
+      document.getElementById("btnCancelEscalate").onclick = closeEscalateModal;
+
+      document.getElementById("btnConfirmEscalate").onclick = async () => {
+        if (!selectedReport) return;
+        const contacts = window.LW.reportsStorage?.getVerifiedRescueContacts ? window.LW.reportsStorage.getVerifiedRescueContacts() : [];
+        const idx = parseInt(agencySelect.value, 10) || 0;
+        const contact = contacts[idx];
+
+        const outcomeStatus = document.getElementById("escalateOutcomeSelect").value;
+        const humanConfirmed = document.getElementById("escalateHumanConfirmed").checked;
+        const reason = document.getElementById("escalateReasonInput").value.trim();
+        const dispatchNotes = document.getElementById("escalateDispatchNotes").value.trim();
+
+        if (!reason) {
+          window.LW.ui?.toast("Please specify the escalation reason.", "warning");
+          document.getElementById("escalateReasonInput").focus();
+          return;
+        }
+
+        try {
+          const btn = document.getElementById("btnConfirmEscalate");
+          btn.disabled = true;
+          btn.textContent = "Recording...";
+
+          await window.LW.reportsStorage.escalateToRescueTeam(selectedReport.id, {
+            agency: contact.agency,
+            contactNumber: contact.displayPhone || contact.phone,
+            contactMethod: "PHONE_CALL_INITIATED",
+            reason: reason,
+            outcomeStatus: outcomeStatus,
+            dispatchNotes: dispatchNotes,
+            isRealActionRecorded: humanConfirmed
+          }, user);
+
+          window.LW.ui?.toast(`Emergency escalation recorded for ${contact.agency}. Status: ${outcomeStatus}.`, "success");
+          closeEscalateModal();
+          await loadReports();
+        } catch (err) {
+          console.error(err);
+          window.LW.ui?.toast(`Failed to record escalation: ${err.message}`, "error");
+        } finally {
+          const btn = document.getElementById("btnConfirmEscalate");
+          btn.disabled = false;
+          btn.textContent = "Record Escalation";
+        }
+      };
+
+      document.getElementById("btnStandDownEscalation").onclick = async () => {
+        if (!selectedReport) return;
+        try {
+          await window.LW.reportsStorage.closeEscalation(selectedReport.id, "Operations Center stood down emergency rescue escalation.", user);
+          window.LW.ui?.toast(`Escalation stood down for ${selectedReport.id}.`, "info");
+          closeEscalateModal();
+          await loadReports();
+        } catch (err) {
+          console.error(err);
+          window.LW.ui?.toast(`Failed to stand down escalation: ${err.message}`, "error");
+        }
+      };
+
+      // -------------------------------------------------------------
+      // MODAL 4: PHOTO LIGHTBOX (Task 1)
+      // -------------------------------------------------------------
+      const lightboxModal = document.getElementById("adminPhotoLightboxModal");
+      const lightboxImg = document.getElementById("lightboxImage");
+      const lightboxMeta = document.getElementById("lightboxMeta");
+
+      function openLightbox(photo, report) {
+        if (!photo) return;
+        lightboxImg.src = photo.url || photo.previewUrl || '';
+        lightboxMeta.textContent = `Attachment: ${photo.filename || 'evidence.jpg'} • Size: ${photo.size ? (photo.size/1024).toFixed(1) + ' KB' : 'Standard'} • Incident: ${report?.id || ''}`;
+        lightboxModal.classList.add("active");
+      }
+
+      function closeLightbox() {
+        lightboxModal.classList.remove("active");
+      }
+
+      document.getElementById("btnCloseLightbox").onclick = closeLightbox;
+      lightboxModal.onclick = (e) => {
+        if (e.target === lightboxModal) closeLightbox();
+      };
+
+      // -------------------------------------------------------------
+      // MODAL 5: RESCUE TEAM LIVE GPS TRACKING
+      // -------------------------------------------------------------
+      const liveTrackingModal = document.getElementById("adminLiveTrackingModal");
+      let trackingMap = null;
+      let trackingIncidentMarker = null;
+      let trackingTeamMarker = null;
+      let trackingTrailPolyline = null;
+      let trackingAccuracyCircle = null;
+
+      async function openLiveTrackingModal(report) {
+        if (!report) return;
+        selectedReport = report;
+        document.getElementById("trackingModalTitle").textContent = `${report.incident_category || report.incidentCategory || 'Incident'} #${report.id}`;
+        document.getElementById("trackingModalSubtitle").textContent = report.location?.roadName || report.location_description || 'Regional Slope';
+
+        liveTrackingModal.classList.add("active");
+
+        // Fetch latest location telemetry
+        let locData = null;
+        try {
+          locData = await window.LW.reportsStorage.getMissionLocation(report.id);
+        } catch(e) {}
+
+        const pill = document.getElementById("trackingModalTelemetryPill");
+        const isTracking = locData?.isTrackingActive || report.isTrackingActive;
+        const isStale = locData?.isLocationStale;
+        const teamLat = locData?.currentLatitude ?? report.currentLatitude;
+        const teamLng = locData?.currentLongitude ?? report.currentLongitude;
+        const teamAcc = locData?.currentAccuracy ?? report.currentAccuracy ?? 10;
+        const trail = locData?.journeyTrail || report.journeyTrail || [];
+
+        if (isTracking && !isStale) {
+          pill.style.background = "#DCFCE7";
+          pill.style.color = "#166534";
+          pill.style.borderColor = "#86EFAC";
+          pill.innerHTML = `🟢 Live Telemetry (±${Math.round(teamAcc)}m)`;
+        } else if (isStale) {
+          pill.style.background = "#FEE2E2";
+          pill.style.color = "#991B1B";
+          pill.style.borderColor = "#FCA5A5";
+          pill.innerHTML = `⚠️ Telemetry Stale (>60s)`;
+        } else {
+          pill.style.background = "#FAF8F2";
+          pill.style.color = "#2E3A2F";
+          pill.style.borderColor = "#D9C9B2";
+          pill.innerHTML = `GPS Standby`;
+        }
+
+        // Initialize / Update Leaflet Map
+        setTimeout(() => {
+          if (!trackingMap) {
+            trackingMap = L.map('adminTrackingMap').setView([25.5788, 91.8933], 11);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              maxZoom: 18,
+              attribution: '&copy; OpenStreetMap'
+            }).addTo(trackingMap);
+          } else {
+            trackingMap.invalidateSize();
+          }
+
+          const incLat = report.latitude ?? report.location?.latitude;
+          const incLng = report.longitude ?? report.location?.longitude;
+
+          if (incLat != null && incLng != null) {
+            if (!trackingIncidentMarker) {
+              const icon = L.divIcon({
+                className: 'admin-inc-marker',
+                html: `<div style="background:#DC2626; color:#FFF; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; border:2px solid #FFF;">⚠️</div>`,
+                iconSize: [26, 26],
+                iconAnchor: [13, 13]
+              });
+              trackingIncidentMarker = L.marker([incLat, incLng], { icon }).addTo(trackingMap);
+            } else {
+              trackingIncidentMarker.setLatLng([incLat, incLng]);
+            }
+          }
+
+          if (teamLat != null && teamLng != null) {
+            if (!trackingTeamMarker) {
+              const icon = L.divIcon({
+                className: 'admin-team-marker',
+                html: `<div style="background:#16A34A; color:#FFF; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; border:2px solid #FFF;">🚑</div>`,
+                iconSize: [28, 28],
+                iconAnchor: [14, 14]
+              });
+              trackingTeamMarker = L.marker([teamLat, teamLng], { icon }).addTo(trackingMap);
+            } else {
+              trackingTeamMarker.setLatLng([teamLat, teamLng]);
+            }
+
+            if (!trackingAccuracyCircle) {
+              trackingAccuracyCircle = L.circle([teamLat, teamLng], {
+                radius: teamAcc,
+                color: '#16A34A',
+                fillColor: '#86EFAC',
+                fillOpacity: 0.15,
+                weight: 1
+              }).addTo(trackingMap);
+            } else {
+              trackingAccuracyCircle.setLatLng([teamLat, teamLng]);
+              trackingAccuracyCircle.setRadius(teamAcc);
+            }
+          }
+
+          // Polyline Trail
+          const points = trail.filter(p => p.latitude != null && p.longitude != null).map(p => [p.latitude, p.longitude]);
+          if (teamLat != null && teamLng != null) points.push([teamLat, teamLng]);
+
+          if (points.length > 0) {
+            if (!trackingTrailPolyline) {
+              trackingTrailPolyline = L.polyline(points, { color: '#2E3A2F', weight: 4, dashArray: '4, 8' }).addTo(trackingMap);
+            } else {
+              trackingTrailPolyline.setLatLngs(points);
+            }
+          }
+
+          const fitPts = [];
+          if (incLat != null && incLng != null) fitPts.push([incLat, incLng]);
+          if (teamLat != null && teamLng != null) fitPts.push([teamLat, teamLng]);
+          if (fitPts.length >= 2) {
+            trackingMap.fitBounds(fitPts, { padding: [40, 40], maxZoom: 15 });
+          } else if (fitPts.length === 1) {
+            trackingMap.setView(fitPts[0], 13);
+          }
+        }, 100);
+      }
+
+      function closeLiveTrackingModal() {
+        liveTrackingModal.classList.remove("active");
+      }
+
+      document.getElementById("btnCloseLiveTrackingModal").onclick = closeLiveTrackingModal;
+      document.getElementById("btnCloseLiveTrackingModalBottom").onclick = closeLiveTrackingModal;
+
+      // Initial Load
+      await loadReports();
+
+      // Cross-tab live updates via BroadcastChannel
+      if (window.LW.reportsStorage?.onSync) {
+        window.LW.reportsStorage.onSync(() => {
+          loadReports();
+        });
       }
     });
   </script>

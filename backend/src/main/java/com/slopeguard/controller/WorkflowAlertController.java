@@ -44,7 +44,7 @@ public class WorkflowAlertController {
      * Lists early-warning alert advisories in the administrative workflow.
      */
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RESCUE_FORCE', 'OFFICER')")
     public ResponseEntity<Page<WorkflowAlertResponse>> listAlerts(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String severity,
@@ -57,7 +57,7 @@ public class WorkflowAlertController {
      * Creates a new alert draft. Drafts are never visible publicly.
      */
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RESCUE_FORCE', 'OFFICER')")
     public ResponseEntity<WorkflowAlertResponse> createDraft(@AuthenticationPrincipal Jwt jwt,
                                                              @Valid @RequestBody WorkflowAlertRequest request) {
         Long userId = extractUserId(jwt);
@@ -69,7 +69,7 @@ public class WorkflowAlertController {
      * Retrieves alert details by ID.
      */
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RESCUE_FORCE', 'OFFICER')")
     public ResponseEntity<WorkflowAlertResponse> getAlert(@PathVariable String id) {
         return ResponseEntity.ok(alertService.getAlert(id));
     }
@@ -78,7 +78,7 @@ public class WorkflowAlertController {
      * Updates an alert in DRAFT status.
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RESCUE_FORCE', 'OFFICER')")
     public ResponseEntity<WorkflowAlertResponse> updateDraft(@PathVariable String id,
                                                              @AuthenticationPrincipal Jwt jwt,
                                                              @Valid @RequestBody WorkflowAlertRequest request) {
@@ -90,7 +90,7 @@ public class WorkflowAlertController {
      * Submits a draft alert for supervisor review (DRAFT -> PENDING_REVIEW).
      */
     @PostMapping("/{id}/submit")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RESCUE_FORCE', 'OFFICER')")
     public ResponseEntity<WorkflowAlertResponse> submitAlert(@PathVariable String id,
                                                              @AuthenticationPrincipal Jwt jwt) {
         Long userId = extractUserId(jwt);
@@ -102,7 +102,7 @@ public class WorkflowAlertController {
      * Rule: The user who created the draft cannot approve it (self-approval prohibited with 403 Forbidden).
      */
     @PostMapping("/{id}/approve")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RESCUE_FORCE', 'OFFICER')")
     public ResponseEntity<WorkflowAlertResponse> approveAlert(@PathVariable String id,
                                                               @AuthenticationPrincipal Jwt jwt) {
         Long userId = extractUserId(jwt);
@@ -113,7 +113,7 @@ public class WorkflowAlertController {
      * Activates public hazard alert broadcast (APPROVED -> PUBLISHED).
      */
     @PostMapping("/{id}/publish")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RESCUE_FORCE', 'OFFICER')")
     public ResponseEntity<WorkflowAlertResponse> publishAlert(@PathVariable String id,
                                                               @AuthenticationPrincipal Jwt jwt) {
         Long userId = extractUserId(jwt);
@@ -124,7 +124,7 @@ public class WorkflowAlertController {
      * Rejects an alert under review back to DRAFT with justification (PENDING_REVIEW -> DRAFT).
      */
     @PostMapping("/{id}/reject")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RESCUE_FORCE', 'OFFICER')")
     public ResponseEntity<WorkflowAlertResponse> rejectAlert(@PathVariable String id,
                                                              @AuthenticationPrincipal Jwt jwt,
                                                              @RequestBody AlertTransitionRequest request) {
@@ -137,7 +137,7 @@ public class WorkflowAlertController {
      * Resolves an active public advisory once hazard threat subsides (PUBLISHED -> RESOLVED).
      */
     @PostMapping("/{id}/resolve")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RESCUE_FORCE', 'OFFICER')")
     public ResponseEntity<WorkflowAlertResponse> resolveAlert(@PathVariable String id,
                                                               @AuthenticationPrincipal Jwt jwt,
                                                               @RequestBody AlertTransitionRequest request) {
@@ -150,7 +150,7 @@ public class WorkflowAlertController {
      * Withdraws an erroneous or superseded public advisory (PUBLISHED -> WITHDRAWN).
      */
     @PostMapping("/{id}/withdraw")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RESCUE_FORCE', 'OFFICER')")
     public ResponseEntity<WorkflowAlertResponse> withdrawAlert(@PathVariable String id,
                                                                @AuthenticationPrincipal Jwt jwt,
                                                                @RequestBody AlertTransitionRequest request) {
@@ -163,7 +163,7 @@ public class WorkflowAlertController {
      * Lists multi-channel delivery dispatch rows for an alert.
      */
     @GetMapping("/{id}/delivery")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RESCUE_FORCE', 'OFFICER')")
     public ResponseEntity<List<AlertDeliveryResponse>> getDeliveries(@PathVariable String id) {
         return ResponseEntity.ok(alertService.getDeliveries(id));
     }

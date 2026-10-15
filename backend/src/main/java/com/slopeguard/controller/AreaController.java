@@ -31,7 +31,7 @@ public class AreaController {
      * Accessible by ADMIN and OFFICER roles.
      */
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RESCUE_FORCE', 'OFFICER')")
     public ResponseEntity<Page<MonitoredAreaResponse>> listAreas(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String status,
@@ -51,10 +51,10 @@ public class AreaController {
     }
 
     /**
-     * Retrieves sector details by ID. Accessible by ADMIN and OFFICER.
+     * Retrieves sector details by ID. Accessible by ADMIN, RESCUE_FORCE, and OFFICER.
      */
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RESCUE_FORCE', 'OFFICER')")
     public ResponseEntity<MonitoredAreaResponse> getArea(@PathVariable Long id) {
         return ResponseEntity.ok(areaService.getArea(id));
     }
